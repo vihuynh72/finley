@@ -77,3 +77,10 @@ export function checkResearch(corpus: Corpus, swarm: Swarm): CheckedResearch {
   }
   return out;
 }
+
+// Compact view of checked developments for the agents downstream: no article text, roughly 80 tokens
+// each, so later rounds stay cheap and fast however much news was collected.
+export function renderDevelopments(developments: CheckedDevelopment[]): string {
+  const attr = (text: string) => (text || "").replace(/"/g, "'");
+  return developments.map((d) => `<development id="${d.id}" topic="${d.topic}" moved="${attr(d.variable)}: ${d.movement}" basis="${d.fact_basis}" date="${d.date || "unknown"}" outlets="${d.outlets.length}" source_check="${d.grounded ? "passed" : "failed"}"${d.headline_only ? ' evidence="headline only"' : ""}>\n${d.fact}\nIndustry meaning: ${d.interpretation}\n</development>`).join("\n");
+}
