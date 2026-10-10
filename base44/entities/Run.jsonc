@@ -26,6 +26,10 @@
     },
     "error": {
       "type": "string"
+    },
+    "briefing_id": {
+      "type": "string",
+      "description": "The Briefing this run produced"
     }
   },
   "required": [
