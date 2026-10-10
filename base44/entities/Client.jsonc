@@ -43,6 +43,10 @@
     "ev_ebitda_multiple": {
       "type": "number"
     },
+    "ticker": {
+      "type": "string",
+      "description": "Stock ticker if the company is listed (e.g. NVDA). Optional: when empty, scans look the company up by name and treat it as private if no listing matches."
+    },
     "assumptions": {
       "type": "array",
       "items": {
