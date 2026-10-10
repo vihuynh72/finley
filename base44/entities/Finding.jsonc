@@ -1,0 +1,124 @@
+{
+  "name": "Finding",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "agent": {
+      "type": "string",
+      "enum": [
+        "competition",
+        "market",
+        "risk"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "fact": {
+      "type": "string",
+      "description": "Observed fact from sources"
+    },
+    "interpretation": {
+      "type": "string",
+      "description": "Analytical interpretation"
+    },
+    "why_it_matters": {
+      "type": "string"
+    },
+    "drivers_affected": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "assumptions_affected": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "next_step": {
+      "type": "string"
+    },
+    "uncertainty": {
+      "type": "string"
+    },
+    "materiality": {
+      "type": "number"
+    },
+    "confidence": {
+      "type": "number"
+    },
+    "urgency": {
+      "type": "number"
+    },
+    "priority": {
+      "type": "number"
+    },
+    "is_alert": {
+      "type": "boolean"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "impact": {
+      "type": "object",
+      "properties": {
+        "revenue_pct": {
+          "type": "number"
+        },
+        "cost_pct": {
+          "type": "number"
+        },
+        "margin_pts": {
+          "type": "number"
+        },
+        "cash_flow_pct": {
+          "type": "number"
+        },
+        "rationale": {
+          "type": "string"
+        }
+      }
+    },
+    "review_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "validated",
+        "rejected"
+      ],
+      "default": "pending"
+    },
+    "feedback": {
+      "type": "string"
+    },
+    "incorporate": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "client_id",
+    "title"
+  ]
+}

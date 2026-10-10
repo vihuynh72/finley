@@ -1,0 +1,49 @@
+{
+  "name": "Scenario",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string"
+    },
+    "question": {
+      "type": "string"
+    },
+    "narrative": {
+      "type": "string"
+    },
+    "price_change_pct": {
+      "type": "number"
+    },
+    "volume_change_pct": {
+      "type": "number"
+    },
+    "cogs_change_pct": {
+      "type": "number"
+    },
+    "opex_change_pct": {
+      "type": "number"
+    },
+    "multiple_change": {
+      "type": "number"
+    },
+    "lever_rationale": {
+      "type": "string"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "client_id",
+    "question"
+  ]
+}

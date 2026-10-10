@@ -1,0 +1,34 @@
+{
+  "name": "Run",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "collecting",
+        "research",
+        "company",
+        "scenario",
+        "done",
+        "failed"
+      ],
+      "default": "queued"
+    },
+    "articles_count": {
+      "type": "number"
+    },
+    "findings_count": {
+      "type": "number"
+    },
+    "error": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "client_id"
+  ]
+}

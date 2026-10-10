@@ -1,0 +1,80 @@
+{
+  "name": "Client",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "industry": {
+      "type": "string"
+    },
+    "business_model": {
+      "type": "string"
+    },
+    "revenue_streams": {
+      "type": "string"
+    },
+    "cost_structure": {
+      "type": "string"
+    },
+    "financial_drivers": {
+      "type": "string"
+    },
+    "strategic_objectives": {
+      "type": "string"
+    },
+    "competitors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "annual_revenue": {
+      "type": "number",
+      "description": "USD millions"
+    },
+    "gross_margin_pct": {
+      "type": "number"
+    },
+    "opex": {
+      "type": "number",
+      "description": "USD millions"
+    },
+    "ev_ebitda_multiple": {
+      "type": "number"
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "driver": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "monitoring",
+              "supported",
+              "challenged",
+              "under_review"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "last_run_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
