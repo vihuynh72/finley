@@ -1,0 +1,79 @@
+import { canon } from "../../shared/schema.ts";
+import type { Article, Corpus } from "./corpus.ts";
+import { type Development, FACT_BASES, MOVEMENTS, type ResearchOutput, TIMEFRAMES, TOPICS } from "./research.ts";
+
+// Code checks on the research swarm's answers, so later agents only build on evidence that holds up.
+// Cited article ids must exist; the quote must appear in a cited headline or snippet; every number
+// in the fact must appear in the cited text. A development that fails a check is kept but marked
+// grounded=false (scoring later caps its confidence); one citing no collected article is dropped.
+
+export interface CheckedDevelopment extends Development {
+  id: string; // "D0", "D1", ... across the swarm, in agent order
+  agent: string; // the research agent that reported it
+  grounded: boolean; // quote and numbers found in the cited articles
+  outlets: string[]; // distinct publishers of the cited stories; a syndicated copy counts as its original
+  headline_only: boolean; // every cited article came without a snippet
+  date: string; // newest cited article's ISO day, or ""
+}
+
+export interface CheckedResearch {
+  developments: CheckedDevelopment[];
+  indicators: ResearchOutput["indicators"];
+  dispositions: (ResearchOutput["dispositions"][number] & { agent: string })[];
+  gaps: string[];
+  dropped: string[]; // developments removed, and why; reported in the briefing, never silently lost
+  failed_agents: string[];
+}
+
+type Swarm = { ok: { name: string; data: ResearchOutput }[]; failed: string[] };
+
+// Dates in an attribution ("reported on 2026-10-08", "on Oct 8, 2026") aren't claims about the event.
+const MONTH = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";
+const DATES = new RegExp(`\\b\\d{4}-\\d{2}-\\d{2}\\b|\\b${MONTH}\\.?\\s+\\d{1,2}(?!\\d)(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?`, "gi");
+const norm = (text: string) => ` ${(text || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `;
+const numbersIn = (text: string) => new Set((text.match(/\d+(?:[.,]\d+)*/g) || []).map((n) => n.replace(/,/g, "")));
+const stripIds = (text: string) => (text || "").replace(/\s*[[(]A\d+[\])]/g, "").trim();
+const citedText = (cited: Article[]) => cited.map((a) => `${a.title} ${a.snippet}`).join(" ");
+
+// The quote may be trimmed with "..."; every fragment of two or more words must appear verbatim.
+function quoteFound(quote: string, cited: Article[]): boolean {
+  const text = norm(citedText(cited));
+  const parts = (quote || "").split(/\.{3}|…/).map(norm).filter((p) => p.trim().split(" ").length >= 2);
+  return parts.length > 0 && parts.every((p) => text.includes(p));
+}
+
+function numbersFound(d: Development, cited: Article[]): boolean {
+  const inText = numbersIn(citedText(cited));
+  const claimed = [d.fact, ...(d.quantities || []).map((q) => q.value_text)].join(" ").replace(DATES, " ");
+  return [...numbersIn(claimed)].every((n) => inText.has(n));
+}
+
+export function checkResearch(corpus: Corpus, swarm: Swarm): CheckedResearch {
+  const byId = new Map(corpus.articles.map((a) => [a.id, a]));
+  // Map cited ids onto real stories: unknown ids vanish, syndicated copies become their original.
+  const resolve = (ids: string[]) => [...new Set((ids || [])
+    .map((id) => byId.get(String(id).trim().toUpperCase())).filter((a): a is Article => !!a)
+    .map((a) => a.duplicate_of || a.id))];
+  const out: CheckedResearch = { developments: [], indicators: [], dispositions: [], gaps: [], dropped: [], failed_agents: swarm.failed };
+  for (const { name, data } of swarm.ok) {
+    for (const d of data.developments || []) {
+      const article_ids = resolve(d.article_ids);
+      if (!article_ids.length) { out.dropped.push(`${name}: "${d.title}" cites no collected article`); continue; }
+      const cited = article_ids.map((id) => byId.get(id)!);
+      const clean = { ...d, title: stripIds(d.title), fact: stripIds(d.fact), interpretation: stripIds(d.interpretation) };
+      out.developments.push({
+        ...clean, id: `D${out.developments.length}`, agent: name, article_ids,
+        fact_basis: canon(d.fact_basis, FACT_BASES, "unconfirmed_report"), topic: canon(d.topic, TOPICS, "company_specific"),
+        movement: canon(d.movement, MOVEMENTS, "new"), timeframe: canon(d.timeframe, TIMEFRAMES, "near_term"),
+        grounded: quoteFound(d.quote, cited) && numbersFound(clean, cited),
+        outlets: [...new Set(cited.map((a) => a.source))],
+        headline_only: cited.every((a) => !a.snippet),
+        date: cited.map((a) => a.date).sort().pop() || "",
+      });
+    }
+    out.indicators.push(...(data.indicators || []).map((i) => ({ ...i, article_ids: resolve(i.article_ids) })).filter((i) => i.article_ids.length));
+    out.dispositions.push(...(data.dispositions || []).map((d) => ({ ...d, agent: name })));
+    out.gaps.push(...(data.gaps || []).map((g) => `${name}: ${g}`));
+  }
+  return out;
+}

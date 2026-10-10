@@ -8,6 +8,9 @@ import { type Corpus, coverageNote, type Lens, marketContext, renderArticles } f
 
 export const TOPICS = ["input_costs", "pricing_competition", "demand_customers", "logistics_freight",
   "regulation", "company_specific", "macro_financing", "technology"] as const;
+export const FACT_BASES = ["confirmed_event", "company_statement", "official_data", "analyst_estimate", "forecast", "unconfirmed_report", "opinion"] as const;
+export const MOVEMENTS = ["up", "down", "flat", "volatile", "new", "ended"] as const;
+export const TIMEFRAMES = ["immediate", "near_term", "long_term"] as const;
 
 export interface Development {
   title: string; fact: string; quote: string; article_ids: string[]; fact_basis: string; topic: string;
@@ -28,17 +31,17 @@ const RESEARCH_SCHEMA = obj({
     fact: str("What happened, past tense, attributed: '<Outlet> reported on <date> that ...'. Only what the cited text states."),
     quote: str("Verbatim excerpt of at most 25 words, copied from the first cited article's headline or snippet"),
     article_ids: list(str(), "Every article that reports this event; the quote comes from the first"),
-    fact_basis: choice(["confirmed_event", "company_statement", "official_data", "analyst_estimate", "forecast", "unconfirmed_report", "opinion"]),
+    fact_basis: choice(FACT_BASES),
     topic: choice(TOPICS, "input_costs: components, commodities, energy, labour. pricing_competition: prices and competitor moves. demand_customers: demand, customers, segments. logistics_freight: shipping and distribution. regulation: law and policy. company_specific: the client's own news. macro_financing: rates, FX, capital. technology: new technology and substitutes."),
     variable: str("What moved, e.g. 'DRAM contract prices' or 'Contoso list prices'"),
-    movement: choice(["up", "down", "flat", "volatile", "new", "ended"]),
+    movement: choice(MOVEMENTS),
     quantities: list(obj({ value_text: str("A number exactly as written in the source, e.g. '20%'"), what: str("What the number measures") })),
-    timeframe: choice(["immediate", "near_term", "long_term"]),
+    timeframe: choice(TIMEFRAMES),
     interpretation: str("Industry-level meaning in at most 2 sentences, without saying whether it helps or hurts the client"),
   }), "At most 6, most significant first. An empty list is a valid answer."),
   indicators: list(obj({ name: str("e.g. 'DRAM contract price'"), value_text: str("Value as written, with its unit"),
     as_of: str("Date as written, or ''"), article_ids: list(str()) }), "Market indicators that come with a stated value"),
-  gaps: list(str(), "Parts of your remit the articles say nothing about"),
+  gaps: list(str(), "At most 3 material blind spots: important parts of your remit these articles say nothing about"),
 });
 
 const RULES = `You are a research analyst on Finley's market-research team. You support a financial analyst (FP&A) who advises the client company described below. Your job is to turn raw news search results into a precise, neutral, cited record of what happened.

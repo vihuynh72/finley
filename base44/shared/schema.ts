@@ -25,3 +25,7 @@ export const score = (description: string) => int(`${description} (integer 1-5)`
 
 // Structured outputs can't enforce the 1-5 range, so clamp whatever comes back.
 export const clampScore = (value: unknown) => Math.min(5, Math.max(1, Math.round(Number(value) || 1)));
+
+// Nor do they guarantee enum casing ("Input_Costs"), so map values back onto the allowed list.
+export const canon = (value: unknown, allowed: readonly string[], fallback: string) =>
+  allowed.find((a) => a === String(value ?? "").trim().toLowerCase()) ?? fallback;
