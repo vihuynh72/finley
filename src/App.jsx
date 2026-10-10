@@ -54,10 +54,10 @@ const AuthenticatedApp = () => {
           <Route path="/clients/new" element={<ClientForm />} />
           <Route path="/clients/:id" element={<ClientDashboard />} />
         </Route>
-      </Route>
-      <Route path="*" element={<PageNotFound />} />
-      <Route path="/Screenshot20261010At124448Pm1" element={<Screenshot20261010At124448Pm1 />} />
-    </Routes>
+        <Route path="/Screenshot20261010At124448Pm1" element={<Screenshot20261010At124448Pm1 />} />
+        </Route>
+        <Route path="*" element={<PageNotFound />} />
+        </Routes>
   );
 };
 
