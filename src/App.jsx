@@ -15,6 +15,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
+import Screenshot20261010At124448Pm1 from './pages/Screenshot20261010At124448Pm1';
 // Add page imports here
 
 const AuthenticatedApp = () => {
@@ -55,6 +56,7 @@ const AuthenticatedApp = () => {
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
+      <Route path="/Screenshot20261010At124448Pm1" element={<Screenshot20261010At124448Pm1 />} />
     </Routes>
   );
 };
