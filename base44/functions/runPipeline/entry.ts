@@ -15,6 +15,9 @@ async function searchNews(q) {
     signal: AbortSignal.timeout(45000),
   });
   if (!res.ok) throw new Error("Bright Data " + res.status + ": " + (await res.text()).slice(0, 200));
+  // Bright Data can answer 200 with an empty body and report the real failure only in this header.
+  const brdError = res.headers.get("x-brd-error");
+  if (brdError) throw new Error("Bright Data: " + brdError.slice(0, 200));
   const data = JSON.parse(await res.text());
   const items = data.news || data.organic || [];
   return items.slice(0, 8).map((n) => ({
