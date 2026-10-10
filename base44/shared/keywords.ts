@@ -9,7 +9,7 @@ import { choice, list, obj, str } from "./schema.ts";
 export const CATEGORIES = ["company_specific", "pricing_competition", "demand_customers", "input_costs", "supply_chain",
   "regulation_policy", "geopolitics_trade", "labor_talent", "macro_financial", "technology_shifts"] as const;
 const SENSITIVITY = ["high", "medium", "low"] as const;
-const MAX_KEYWORDS = 200;
+const MAX_KEYWORDS = 20; // each keyword is one Bright Data search per scan
 
 export interface Exposure { name: string; category: string; driver: string; why: string; sensitivity: string; keywords: string[] }
 export interface KeywordPlan { model: string; keyword_count: number; exposures: Exposure[] }
@@ -21,8 +21,8 @@ const PLAN_SCHEMA = obj({
     driver: str("The client driver or assumption this force moves; reuse the client's own driver name when one fits"),
     why: str("One sentence on how this force moves the client's revenue, costs or valuation"),
     sensitivity: choice(SENSITIVITY, "How strongly this force can move the client's numbers"),
-    keywords: list(str("A news search query of 2 to 6 words"), "4 to 12 search queries for this force"),
-  }), "15 to 25 forces, most important first"),
+    keywords: list(str("A news search query of 2 to 6 words"), "1 to 3 search queries for this force"),
+  }), "5 to 10 forces, most important first"),
 });
 
 const RULES = `You are Finley's monitoring planner. A financial analyst (FP&A) has just entered a client company's profile. Work out which external forces could make this business volatile, up or down, and write the news-search keywords that will watch each force. Every keyword becomes a Google News search, so these keywords decide what the whole system can see.
@@ -32,6 +32,7 @@ How to think:
 - Include second-order forces, not just obvious ones. For a GPU maker, for example: memory and wafer prices, gold and rare-metal prices, chip export controls, visa rules for engineers, data-centre power limits, hyperscaler capital spending, and competitors' accelerator launches.
 - Cover upside as well as downside; a demand boom moves the numbers too.
 - Give every assumption and driver in the profile at least one force that watches it.
+- Be selective: keep the forces most likely to move this business's numbers, including any that could cause a sharp swing, and drop the rest.
 
 How to write keywords:
 - 2 to 6 words, phrased the way a journalist would put the topic in a headline: "DRAM contract prices", "US chip export controls", "H-1B visa rules", "rare earth export ban", "hyperscaler capex".
@@ -45,8 +46,7 @@ export async function planKeywords(client: Record<string, any>, opts: { usage?: 
     name: "keywords/planner",
     system: RULES,
     schema: PLAN_SCHEMA,
-    // Live test on a fictional GPU maker: high found 23 forces / 115 keywords in 55s; xhigh found
-    // 24 / 125 in 123s. Same coverage at half the wait, so high it is.
+    // In a live test on a fictional GPU maker, high matched xhigh's coverage in 55s instead of 123s.
     effort: "high" as const,
     deadline: opts.deadline,
     prompt: `Today is ${new Date().toISOString().slice(0, 10)}.\n\n<client_profile>\n${profileText(client)}\n</client_profile>\n\nMap the forces that could make this business volatile and write the search keywords for each.`,
@@ -78,14 +78,14 @@ export function cleanKeyword(raw: string): string {
 }
 
 // Drops unusable and duplicate keywords (ignoring case) across the whole plan, keeps forces in the
-// model's priority order, and stops at 200 keywords so later, lower-priority forces are trimmed first.
+// model's priority order, and stops at 20 keywords so later, lower-priority forces are trimmed first.
 export function normalizePlan(exposures: Exposure[]): { keyword_count: number; exposures: Exposure[] } {
   const seen = new Set<string>();
   const cleaned = exposures.filter((e) => (e.name || "").trim()).map((e) => ({
     name: e.name.trim(),
     category: canon(e.category, CATEGORIES, "company_specific"),
     driver: (e.driver || "").trim(),
-    why: (e.why || "").trim().slice(0, 240), // keeps a 200-keyword plan well under Base44's 20K-char field cap
+    why: (e.why || "").trim().slice(0, 240), // one sentence; also keeps records far below Base44's field-size cap
     sensitivity: canon(e.sensitivity, SENSITIVITY, "medium"),
     keywords: (e.keywords || []).map(cleanKeyword).filter((k) => {
       const key = k.toLowerCase();

@@ -1,7 +1,8 @@
-// What the research swarm reads. entry.ts collects and dedupes the Bright Data results (that
-// code stays untouched); this module numbers, dates and labels those articles for the agents.
+// What the research swarm reads. entry.ts runs the Bright Data searches (searches.ts picks them) and
+// dedupes the results; this module numbers, dates and labels those articles for the agents.
 
 export type Lens = "company" | "competitor" | "regulation" | "market";
+export type Search = { query: string; lens: Lens }; // one Bright Data search, and which research agent reads its results
 export type RawArticle = { title: string; url: string; source: string; date: string; snippet: string };
 
 export interface Article {
@@ -28,14 +29,11 @@ export function isoDay(raw: string, now: Date): string {
   return Number.isFinite(ms) ? new Date(ms).toISOString().slice(0, 10) : "";
 }
 
-// entry.ts searches [client name, ...up to 3 competitors, "<industry> regulation", "<industry> market outlook"].
-const lensOf = (i: number, count: number): Lens =>
-  i === 0 ? "company" : i === count - 1 ? "market" : i === count - 2 ? "regulation" : "competitor";
-
 const clean = (text: string) => (text || "").replace(/[<>"]/g, "").replace(/\s+/g, " ").trim();
 const headlineKey = (title: string) => clean(title).toLowerCase().replace(/\s[-–|]\s[^-–|]+$/, "").replace(/[^a-z0-9]+/g, " ").trim();
 
-export function buildCorpus(client: Record<string, any>, queries: string[], results: PromiseSettledResult<RawArticle[]>[], raw: RawArticle[], now = new Date()): Corpus {
+// results[i] holds what searches[i] found (entry.ts runs them in order); raw is entry.ts's deduped list.
+export function buildCorpus(client: Record<string, any>, searches: Search[], results: PromiseSettledResult<RawArticle[]>[], raw: RawArticle[], now = new Date()): Corpus {
   const firstQuery = new Map<string, number>();
   results.forEach((r, i) => r.status === "fulfilled" && r.value.forEach((a) => firstQuery.has(a.url) || firstQuery.set(a.url, i)));
   const name = (client.name || "").toLowerCase();
@@ -47,11 +45,11 @@ export function buildCorpus(client: Record<string, any>, queries: string[], resu
     if (key && !duplicate_of) headlines.set(key, `A${i}`);
     return {
       id: `A${i}`, title: clean(a.title), url: a.url, source: clean(a.source) || "unknown outlet",
-      snippet: clean(a.snippet), date: isoDay(a.date, now), lens: lensOf(q, queries.length), query: queries[q],
+      snippet: clean(a.snippet), date: isoDay(a.date, now), lens: searches[q].lens, query: searches[q].query,
       mentions_client: !!name && `${a.title} ${a.snippet}`.toLowerCase().includes(name), duplicate_of,
     };
   });
-  const failed_queries = queries.filter((_, i) => results[i]?.status === "rejected");
+  const failed_queries = searches.filter((_, i) => results[i]?.status === "rejected").map((s) => s.query);
   return { today: now.toISOString().slice(0, 10), articles, failed_queries };
 }
 

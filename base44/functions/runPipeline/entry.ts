@@ -1,16 +1,17 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import { secrets } from "base44:runtime";
 import { claudeJSON, profileText } from "../../shared/claude.ts";
-
-const rawZone = (secrets.get("BRIGHTDATA_SERP_ZONE") || "").trim();
-const ZONE = (rawZone.match(/zone\W+([\w-]+)/) || [null, rawZone])[1];
+import { planSearches } from "./searches.ts";
 
 async function searchNews(q) {
+  // Read per request: Base44 resolves secrets inside the handler, and a module-level read is undefined.
+  const rawZone = (secrets.get("BRIGHTDATA_SERP_ZONE") || "").trim();
+  const zone = (rawZone.match(/zone\W+([\w-]+)/) || [null, rawZone])[1];
   const url = `https://www.google.com/search?q=${encodeURIComponent(q)}&tbm=nws&brd_json=1`;
   const res = await fetch("https://api.brightdata.com/request", {
     method: "POST",
     headers: { Authorization: `Bearer ${secrets.get("BRIGHTDATA_API_KEY")}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ zone: ZONE, url, format: "raw" }),
+    body: JSON.stringify({ zone, url, format: "raw" }),
     signal: AbortSignal.timeout(45000),
   });
   if (!res.ok) throw new Error("Bright Data " + res.status + ": " + (await res.text()).slice(0, 200));
@@ -41,7 +42,10 @@ export default async function (req) {
 
     // 1. Collection via Bright Data
     await base44.entities.Run.update(run_id, { stage: "collecting" });
-    const queries = [client.name, ...(client.competitors || []).slice(0, 3), `${client.industry} regulation`, `${client.industry} market outlook`];
+    // Searches come from the client's latest keyword plan (planKeywords); no plan means the original fixed list.
+    const plans = await base44.entities.KeywordPlan.filter({ client_id: client.id }, { sort: "-created_date", limit: 1 }).catch(() => null);
+    const searches = planSearches(client, plans?.items?.[0]);
+    const queries = searches.map((s) => s.query);
     const results = await Promise.allSettled(queries.map(searchNews));
     const seen = new Set();
     const articles = results.flatMap((r) => (r.status === "fulfilled" ? r.value : [])).filter((a) => a.url && !seen.has(a.url) && seen.add(a.url));
