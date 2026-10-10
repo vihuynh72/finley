@@ -2,12 +2,15 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import { secrets } from "base44:runtime";
 import { claudeJSON, profileText } from "../../shared/claude.ts";
 
+const rawZone = (secrets.get("BRIGHTDATA_SERP_ZONE") || "").trim();
+const ZONE = (rawZone.match(/zone\W+([\w-]+)/) || [null, rawZone])[1];
+
 async function searchNews(q) {
   const url = `https://www.google.com/search?q=${encodeURIComponent(q)}&tbm=nws&brd_json=1`;
   const res = await fetch("https://api.brightdata.com/request", {
     method: "POST",
     headers: { Authorization: `Bearer ${secrets.get("BRIGHTDATA_API_KEY")}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ zone: secrets.get("BRIGHTDATA_SERP_ZONE"), url, format: "raw" }),
+    body: JSON.stringify({ zone: ZONE, url, format: "raw" }),
     signal: AbortSignal.timeout(45000),
   });
   if (!res.ok) throw new Error("Bright Data " + res.status + ": " + (await res.text()).slice(0, 200));
