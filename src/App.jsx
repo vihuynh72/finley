@@ -56,10 +56,10 @@ const AuthenticatedApp = () => {
           <Route path="/clients/:id" element={<ClientDashboard />} />
         </Route>
         <Route path="/Screenshot20261010At124448Pm1" element={<Screenshot20261010At124448Pm1 />} />
+          <Route path="/Screenshot20261010At124448Pm12" element={<Screenshot20261010At124448Pm12 />} />
         </Route>
         <Route path="*" element={<PageNotFound />} />
-          <Route path="/Screenshot20261010At124448Pm12" element={<Screenshot20261010At124448Pm12 />} />
-        </Routes>
+      </Routes>
   );
 };
 
