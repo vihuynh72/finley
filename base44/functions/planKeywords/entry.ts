@@ -3,15 +3,15 @@ import { planKeywords, profileFingerprint } from "../../shared/keywords.ts";
 
 // Builds a client's keyword plan (risk indicators plus Bright Data search keywords) when the analyst
 // enters or changes the client's info. Calling it again with no profile change does nothing, so it is
-// safe to call on every save. Body: { client_id, force? }.
+// safe to call on every save. Body: { client_id, force? }. Only signed-in users, under their own access
+// rules: no service-role fallback, so an anonymous caller can't spend tokens on any client.
 export default async function (req) {
   try {
-    const base44 = createClientFromRequest(req);
-    // A signed-in analyst calls this after saving a client; a Base44 workflow trigger has no user.
-    const user = await base44.auth.me().catch(() => null);
-    const db = user ? base44 : base44.asServiceRole;
+    const db = createClientFromRequest(req);
+    const user = await db.auth.me().catch(() => null);
+    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
     const body = await req.json().catch(() => ({}));
-    const client_id = body.client_id || body.data?.id || body.event?.entity_id;
+    const client_id = body.client_id;
     if (!client_id) return Response.json({ error: "client_id required" }, { status: 400 });
 
     const client = await db.entities.Client.get(client_id);

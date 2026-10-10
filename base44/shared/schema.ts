@@ -20,10 +20,10 @@ export const nullable = (schema: Schema, description?: string) =>
 export const obj = (properties: Record<string, Schema>, description?: string) =>
   describe({ type: "object", properties, required: Object.keys(properties), additionalProperties: false }, description);
 
-// 1-5 rubric score. The rubric itself lives in the prompt so every agent scores alike.
-export const score = (description: string) => int(`${description} (integer 1-5)`);
+// 1-5 rubric score. An integer enum bounds it (min/max aren't supported); the rubric lives in the prompt.
+export const score = (description: string) => describe({ type: "integer", enum: [1, 2, 3, 4, 5] }, description);
 
-// Structured outputs can't enforce the 1-5 range, so clamp whatever comes back.
+// Clamp anyway, as a second line of defence before scores reach Base44 and the alert rule.
 export const clampScore = (value: unknown) => Math.min(5, Math.max(1, Math.round(Number(value) || 1)));
 
 // Nor do they guarantee enum casing ("Input_Costs"), so map values back onto the allowed list.

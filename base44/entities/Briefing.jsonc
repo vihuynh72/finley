@@ -1,0 +1,25 @@
+{
+  "name": "Briefing",
+  "type": "object",
+  "properties": {
+    "client_id": { "type": "string" },
+    "run_id": { "type": "string" },
+    "as_of": { "type": "string", "format": "date-time", "description": "When the run started; every figure in this briefing is as of this moment" },
+    "status": { "type": "string", "enum": ["complete", "partial"], "description": "partial when some agents or steps failed; see errors" },
+    "headline": { "type": "string", "description": "The market picture's headline" },
+    "summary": { "type": "string", "description": "The company lead's answer to: will the company do well if today's developments persist?" },
+    "market_data": { "type": "object", "description": "Stock snapshot as of the run, for listed clients: close, moves, 52-week range" },
+    "market": { "type": "object", "description": "Market picture: overview, themes, source conflicts, players, watch items, timeline" },
+    "company": { "type": "object", "description": "Outlook, assumption tests, profile checks, watchlist" },
+    "findings": { "type": "array", "items": { "type": "object" }, "description": "Findings saved by this run: Finding ids, titles, topics, scores" },
+    "ongoing": { "type": "array", "items": { "type": "object" }, "description": "Repeats of earlier findings, which are not saved again" },
+    "scenarios": { "type": "object", "description": "Plan, downside, central and upside cases computed from this run's quantified findings" },
+    "questions": { "type": "array", "items": { "type": "object" }, "description": "Suggested what-if questions with computed answers" },
+    "charts": { "type": "object", "description": "Chart-ready series: EBITDA bridge, scenario comparison, sensitivity, assumption health, coverage" },
+    "coverage": { "type": "object", "description": "What was searched and read, blind spots, and anything dropped" },
+    "alert_email": { "type": "object", "description": "Urgent email status: to, subject, sent_at, status, error" },
+    "stats": { "type": "object", "description": "Time and tokens per agent" },
+    "errors": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["client_id", "run_id"]
+}

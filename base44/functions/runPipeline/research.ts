@@ -8,6 +8,10 @@ import { type Corpus, coverageNote, type Lens, marketContext, renderArticles } f
 
 export const TOPICS = ["input_costs", "pricing_competition", "demand_customers", "logistics_freight",
   "regulation", "company_specific", "macro_financing", "technology"] as const;
+// The five dashboard topics (src/components/figma/topics.js), keyed as in TOPICS. Findings must name
+// exactly one, so the Figma sidebar and EbitdaCharts count each finding once.
+export const UI_TOPICS: Record<string, string> = { input_costs: "Input costs", pricing_competition: "Pricing and competition",
+  demand_customers: "Demand and customers", logistics_freight: "Logistics and freight", regulation: "Regulation" };
 export const FACT_BASES = ["confirmed_event", "company_statement", "official_data", "analyst_estimate", "forecast", "unconfirmed_report", "opinion"] as const;
 export const MOVEMENTS = ["up", "down", "flat", "volatile", "new", "ended"] as const;
 export const TIMEFRAMES = ["immediate", "near_term", "long_term"] as const;

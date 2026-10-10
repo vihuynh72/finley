@@ -1,0 +1,55 @@
+import { effectOf, findingImpact, hasFinancials, type Levers, leversFor, materialityBand, NO_CHANGE, r2 } from "../../shared/finance.ts";
+import { canon, clampScore } from "../../shared/schema.ts";
+import { PNL_LINES } from "./company.ts";
+import { UI_TOPICS } from "./research.ts";
+
+// Turns the impact estimator's inputs into money with finance.ts: the central effect, a range from the
+// plausible shock bounds, the dashboard's Finding.impact, and a materiality band for scoring. The
+// derivation is spelled out in plain words, so every figure shows where it came from.
+
+export interface Candidate {
+  development_ids: string[]; topic: string; driver: string; assumption_indexes: number[]; effect: string; mechanism: string; estimate: string;
+  pnl_line: string; shock_pct: number; exposure_pct: number; pass_through_pct: number; persistence: string; duration_quarters: number;
+  shock_min_pct: number; shock_max_pct: number; shock_basis: string; exposure_basis: string; likelihood: number; horizon: string; rationale: string;
+}
+export interface Quantified extends Candidate {
+  id: string; // "C0", "C1", ...
+  quantified: boolean; levers: Levers; quarters: number;
+  ebitda_delta: number; ebitda_low: number; ebitda_high: number; // USD m a year while it lasts
+  ev_delta: number; ev_pct: number; // persistent: capitalised at the multiple; transitory: the quarters it lasts
+  band: number; // materiality band of the central EBITDA effect
+  impact: { revenue_pct: number; cost_pct: number; margin_pts: number; rationale: string } | null;
+}
+
+const money = (n: number) => `${n < 0 ? "-" : "+"}$${Math.abs(n)}m`;
+
+export function quantifyCandidates(client: Record<string, any>, candidates: Candidate[], known: Set<string>, mergedInto: Record<string, string> = {}): Quantified[] {
+  const financials = hasFinancials(client);
+  return (candidates || []).slice(0, 8).map((c, i): Quantified => {
+    const pnl_line = canon(c.pnl_line, PNL_LINES, "cogs");
+    const development_ids = [...new Set((c.development_ids || []).map((id) => mergedInto[id] || id).filter((id) => known.has(id)))];
+    const base = { ...c, id: `C${i}`, pnl_line, development_ids, topic: canon(c.topic, Object.keys(UI_TOPICS), "input_costs"), likelihood: clampScore(c.likelihood) };
+    const ok = financials && canon(c.estimate, ["quantified"], "") === "quantified" && Number(c.shock_pct) !== 0 && Number(c.exposure_pct) > 0;
+    if (!ok) return { ...base, quantified: false, levers: { ...NO_CHANGE }, quarters: 0, ebitda_delta: 0, ebitda_low: 0, ebitda_high: 0, ev_delta: 0, ev_pct: 0, band: 1, impact: null };
+    const persistent = canon(c.persistence, ["persistent"], "transitory") === "persistent";
+    const quarters = persistent ? 4 : Math.min(8, Math.max(1, Math.round(Number(c.duration_quarters) || 1)));
+    const at = (shock: number) => leversFor(client, { pnl_line, shock_pct: shock, exposure_pct: c.exposure_pct, pass_through_pct: c.pass_through_pct });
+    const levers = at(c.shock_pct);
+    const central = effectOf(client, levers, quarters);
+    const ends = [c.shock_min_pct, c.shock_max_pct, c.shock_pct].map((s) => effectOf(client, at(Number(s) || 0), quarters).ebitda_delta);
+    const [ev_delta, ev_pct] = persistent ? [central.ev_persistent, central.ev_persistent_pct] : [central.ev_transitory, central.ev_transitory_pct];
+    const how = `${c.shock_pct > 0 ? "+" : ""}${c.shock_pct}% on ${c.exposure_pct}% of ${pnl_line === "cogs" ? "COGS" : pnl_line} (shock: ${c.shock_basis}; exposure: ${c.exposure_basis})` +
+      (pnl_line === "cogs" && c.pass_through_pct ? `, ${c.pass_through_pct}% passed on to prices` : "");
+    const lasts = persistent ? "persistent" : `lasting ${quarters} quarter${quarters > 1 ? "s" : ""}`;
+    const rationale = `Illustrative scenario, not a forecast: ${how}, ${lasts}. EBITDA ${money(central.ebitda_delta)} a year while it lasts (range ${money(Math.min(...ends))} to ${money(Math.max(...ends))}); EV ${money(ev_delta)}.`;
+    return { ...base, quantified: true, levers, quarters, ebitda_delta: central.ebitda_delta, ebitda_low: r2(Math.min(...ends)), ebitda_high: r2(Math.max(...ends)),
+      ev_delta, ev_pct, band: materialityBand(client, central.ebitda_delta), impact: findingImpact(client, levers, rationale) };
+  });
+}
+
+// Compact view for the company lead and the scenario agent: the computed money next to the inputs.
+export function renderCandidates(candidates: Quantified[]): string {
+  if (!candidates.length) return "No impact candidates this scan.";
+  return candidates.map((c) => `<candidate id="${c.id}" topic="${c.topic}" driver="${(c.driver || "").replace(/"/g, "'")}" effect="${c.effect}" likelihood="${c.likelihood}" horizon="${c.horizon}" developments="${c.development_ids.join(",")}"${
+    c.quantified ? ` ebitda_per_year="${money(c.ebitda_delta)} (range ${money(c.ebitda_low)} to ${money(c.ebitda_high)})" ev="${money(c.ev_delta)} (${c.ev_pct}%)" materiality_band="${c.band}"` : ' quantified="no"'}>\n${c.mechanism}${c.impact ? `\n${c.impact.rationale}` : ""}\n</candidate>`).join("\n");
+}

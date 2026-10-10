@@ -2,6 +2,7 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import { secrets } from "base44:runtime";
 import { claudeJSON, profileText } from "../../shared/claude.ts";
 import { planSearches } from "./searches.ts";
+import { runAgentPipeline } from "./pipeline.ts";
 
 async function searchNews(q) {
   // Read per request: Base44 resolves secrets inside the handler, and a module-level read is undefined.
@@ -32,6 +33,7 @@ const AGENTS = {
 };
 
 export default async function (req) {
+  const startedAt = Date.now(); // the run's as-of moment, and the clock for Base44's 5-minute limit
   const base44 = createClientFromRequest(req);
   let run_id;
   try {
@@ -54,6 +56,11 @@ export default async function (req) {
     const articles = results.flatMap((r) => (r.status === "fulfilled" ? r.value : [])).filter((a) => a.url && !seen.has(a.url) && seen.add(a.url));
     if (!articles.length) throw new Error("No articles collected: " + results.map((r) => r.reason?.message).filter(Boolean).join(" | "));
     await base44.entities.Run.update(run_id, { stage: "research", articles_count: articles.length });
+    // The agent pipeline (pipeline.ts) runs from here. Setting the PIPELINE_V1 secret to "1" rolls back
+    // to the original pipeline below.
+    if (secrets.get("PIPELINE_V1") !== "1") {
+      return Response.json(await runAgentPipeline({ base44, user, run_id, client, searches, results, articles, startedAt }));
+    }
     const corpus = articles.map((a, i) => `[${i}] ${a.title} — ${a.source} ${a.date}\n${a.snippet}`).join("\n");
 
     // 2. Research agent team (parallel specialists)
