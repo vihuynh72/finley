@@ -5,6 +5,14 @@
     "client_id": {
       "type": "string"
     },
+    "name": {
+      "type": "string",
+      "description": "Name of a scenario saved from the dashboard's sliders"
+    },
+    "values": {
+      "type": "object",
+      "description": "Slider values saved from the dashboard: topic id -> { driver id: value }"
+    },
     "question": {
       "type": "string"
     },

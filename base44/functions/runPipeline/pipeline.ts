@@ -21,10 +21,13 @@ import { answerQuestions, runScenarioAgent } from "./scenario.ts";
 //
 // startedAt is the stopwatch for that limit; asOf (default startedAt) is the moment the run reasons
 // from: "today" in prompts, market data, recent findings. A backtest (eval/stages.ts) passes a past
-// asOf and backtest: true, which also skips earlier findings, saved questions and alert emails, since
-// those come from after the cutoff.
+// asOf and backtest: true, which also skips earlier findings, saved questions, alert emails and stock
+// market data, since those come from after the cutoff.
 
 const FINISH_BY_MS = 270_000; // after the handler started, leaving time for the final writes
+// Yahoo's history is adjusted for every later stock split, so a past close can be far from the price
+// quoted at the time (and would hint at the split). Backtests leave market data out.
+const BACKTEST_MARKET_NOTE = "Stock market data is not available for this date; use the share price in the client's public facts, if any.";
 
 export async function runAgentPipeline(ctx: { base44: any; user: any; run_id: string; client: Record<string, any>; searches: Search[];
   results: PromiseSettledResult<RawArticle[]>[]; articles: RawArticle[]; startedAt: number; asOf?: number; backtest?: boolean }) {
@@ -40,7 +43,7 @@ export async function runAgentPipeline(ctx: { base44: any; user: any; run_id: st
   // Round 1. The research swarm throws only if all three agents fail, which fails the run.
   const [swarm, market, prior, asked] = await Promise.all([
     runResearchSwarm(corpus, client, { deadline: within(100_000), usage }),
-    companyMarket(client, new Date(asOf)),
+    ctx.backtest ? Promise.resolve({ snapshot: null, note: BACKTEST_MARKET_NOTE }) : companyMarket(client, new Date(asOf)),
     ctx.backtest ? [] : soft("earlier findings", base44.entities.Finding.filter({ client_id: client.id }, { sort: "-created_date", limit: 30 })
       .then((p: any) => (p.items || []).filter((f: any) => (f.created_date || "") >= monthAgo)), []),
     ctx.backtest ? [] : soft("saved scenarios", base44.entities.Scenario.filter({ client_id: client.id }, { sort: "-created_date", limit: 20 })
@@ -98,6 +101,8 @@ export async function runAgentPipeline(ctx: { base44: any; user: any; run_id: st
   } catch (e) {
     errors.push(`briefing: ${(e as Error).message}`);
   }
-  await base44.entities.Run.update(run_id, { stage: "done", findings_count: saved.length, ...(briefing_id ? { briefing_id } : {}) });
+  // Partial runs end "done" too (the findings that were made are saved); the error says what failed.
+  await base44.entities.Run.update(run_id, { stage: "done", findings_count: saved.length, ...(briefing_id ? { briefing_id } : {}),
+    ...(errors.length ? { error: `Finished with problems: ${errors.join(" | ")}`.slice(0, 900) } : {}) });
   return { ok: true, findings: saved.length, briefing_id, errors };
 }

@@ -40,9 +40,9 @@ export async function searchNews(q: string, opts: SearchOptions = {}): Promise<R
     body: JSON.stringify({ zone, url: newsSearchUrl(q, opts), format: "raw" }),
     signal: AbortSignal.timeout(opts.timeoutMs ?? 45000),
   });
-  if (!res.ok) throw new Error("Bright Data " + res.status + ": " + (await res.text()).slice(0, 200));
-  // Bright Data can answer 200 with an empty body and report the real failure only in this header.
+  // Bright Data can report the real failure only in this header, even on a 200 with an empty body.
   const brdError = res.headers.get("x-brd-error");
+  if (!res.ok) throw new Error(`Bright Data ${res.status}: ${(brdError || (await res.text())).slice(0, 200)}`);
   if (brdError) throw new Error("Bright Data: " + brdError.slice(0, 200));
   return parseNews(await res.text(), opts.limit ?? 8);
 }

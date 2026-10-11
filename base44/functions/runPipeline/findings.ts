@@ -47,7 +47,10 @@ export function buildFindings(x: Inputs) {
     if (outlets.size < 2) confidence = Math.min(confidence, 4);
     if (cited.every((d) => d.headline_only)) confidence = Math.min(confidence, 3);
     if (cited.every((d) => !d.grounded || WEAK_BASIS.has(d.fact_basis))) confidence = Math.min(confidence, 2);
-    const candidate = x.candidates.find((c) => c.id === (f.candidate_id || "").trim().toUpperCase());
+    // A candidate's money backs one finding only, and only one that cites a development the
+    // candidate was estimated from; otherwise the same EBITDA effect would be counted twice.
+    const named = x.candidates.find((c) => c.id === (f.candidate_id || "").trim().toUpperCase());
+    const candidate = named && !candidate_ids.includes(named.id) && named.development_ids.some((id) => cited.some((d) => d.id === id)) ? named : undefined;
     const band = candidate?.quantified ? candidate.band : 0;
     const materiality = band ? Math.min(band + 1, Math.max(band - 1, clampScore(f.materiality))) : clampScore(f.materiality);
     const newest = cited.map((d) => d.date).filter(Boolean).sort().pop() || "";

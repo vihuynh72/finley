@@ -39,13 +39,13 @@ export interface TopicSpec {
 }
 // The frontend's Topic interface (src/lib/data.ts in the prototype, with a string id), from compileTopic.
 export interface Topic {
-  id: string; name: string; category?: string; sensitivity?: string; keywords?: string[]; why?: string;
+  id: string; name: string; category?: string | undefined; sensitivity?: string | undefined; keywords?: string[] | undefined; why?: string | undefined;
   subject: string; assumption: string; baseValue: string;
   drivers: DriverSpec[];
   compute: (v: Values) => Delta;
   formula: (v: Values) => string;
   presets: { downside: Values; upside: Values };
-  longRange?: { note: string; label: string; compute: (v: Values) => number; formula: (v: Values) => string };
+  longRange?: { note: string; label: string; compute: (v: Values) => number; formula: (v: Values) => string } | undefined;
 }
 
 // Display formats, identical to the prototype's fmtM / fmtDriver so formulas read the same everywhere.

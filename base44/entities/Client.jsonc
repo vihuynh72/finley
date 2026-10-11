@@ -82,6 +82,14 @@
       "type": "string",
       "description": "Set on clients created by a backtest (e.g. netflix-2023): the profile as of the case's cutoff. Empty for real clients."
     },
+    "rec_decisions": {
+      "type": "object",
+      "description": "Analyst decisions on recommendations: recommendation id -> open | accepted | snoozed | dismissed"
+    },
+    "source_overrides": {
+      "type": "object",
+      "description": "Analyst source tier overrides: outlet name -> { tier, reason, at }"
+    },
     "last_run_at": {
       "type": "string",
       "format": "date-time"

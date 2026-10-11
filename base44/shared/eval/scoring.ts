@@ -85,7 +85,7 @@ export function scoreRecommendations(c: EvalCase, f: Forecast | null, matches: R
   const rows = recs.map((r) => {
     const m = byRec.get(r.id) ?? { rec_id: r.id, action_id: "", label: "none" as const, rationale: "not judged" };
     const action = c.actions.find((a) => a.id === m.action_id);
-    return { ...r, match: m.label, action_id: m.action_id, action: action?.text ?? "", action_date: action?.date ?? "", judge_rationale: m.rationale };
+    return { ...r, match: m.label, action_id: m.action_id, company_action: action?.text ?? "", action_date: action?.date ?? "", judge_rationale: m.rationale };
   });
   const hit = (label: string, strict: boolean) => label === "exact" || (!strict && label === "partial");
   const anticipated = (strict: boolean) => decisions.filter((d) => rows.some((r) => r.action_id === d.id && hit(r.match, strict)));

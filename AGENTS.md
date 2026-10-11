@@ -19,9 +19,11 @@ npx skills add base44/skills
 
 ## Key Files
 
-- `src/`: frontend application source.
-- `src/api/base44Client.js`: frontend Base44 SDK client.
-- `vite.config.js`: Vite config and Base44 Vite plugin setup.
+- `src/`: frontend application source (React + TypeScript, TanStack Router file routes in `src/routes/`).
+- `src/api/base44Client.ts`: frontend Base44 SDK client.
+- `src/lib/live.ts` and `src/lib/store.tsx`: map Base44 records onto the dashboard's types and load them.
+- `vite.config.ts`: Vite config and Base44 Vite plugin setup.
+- `base44/`: entities, backend functions (Deno) and code shared between them; see `CLAUDE.md`.
 - `.env.local`: local-only environment values; never commit secrets.
 
 ## Working Notes

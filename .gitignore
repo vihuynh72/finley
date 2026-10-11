@@ -34,6 +34,8 @@ dist-ssr
 
 .env
 .vite
+# TanStack Router plugin cache (src/routeTree.gen.ts itself is committed)
+.tanstack
 
 # Local link to a Base44 app, written by `base44 link`
 base44/.app.jsonc

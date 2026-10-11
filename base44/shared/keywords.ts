@@ -50,7 +50,7 @@ export async function planKeywords(client: Record<string, any>, opts: { usage?: 
     // In a live test on a fictional GPU maker, high matched xhigh's coverage in 55s instead of 123s.
     effort: "high" as const,
     deadline: opts.deadline,
-    prompt: `Today is ${opts.today || new Date().toISOString().slice(0, 10)}.\n\n<client_profile>\n${profileText(client)}\n</client_profile>\n\nMap the forces that could make this business volatile and write the search keywords for each.`,
+    prompt: `Today is ${opts.today || new Date().toISOString().slice(0, 10)}.${opts.today ? " Plan as of that date: use only what was known then, not anything you may know about later events." : ""}\n\n<client_profile>\n${profileText(client)}\n</client_profile>\n\nMap the forces that could make this business volatile and write the search keywords for each.`,
   };
   // An empty or cut-off answer is rare; one retry with less thinking is cheap insurance.
   const answer = await runAgent<{ exposures: Exposure[] }>(call, opts.usage)

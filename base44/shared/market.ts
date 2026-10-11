@@ -79,8 +79,5 @@ export function snapshotText(market: { snapshot: MarketSnapshot | null; note: st
   if (!s) return market.note;
   const sign = (n: number) => `${n > 0 ? "+" : ""}${n}%`;
   const price = s.live ? `latest price on ${s.close_date} (market still open)` : `close on ${s.close_date}`;
-  // Yahoo adjusts history for every later split, so a backtest's prices can differ from news of the time.
-  const historical = Date.now() - Date.parse(`${s.as_of}T00:00:00Z`) > 30 * 86_400_000;
-  const adjusted = historical ? " Prices are adjusted for any later stock splits, so they can differ from prices quoted in news of the time." : "";
-  return `${s.name} (${s.ticker}, ${s.exchange}), prices in ${s.currency}. As of ${s.as_of}: ${price} ${s.close}, previous close ${s.prev_close} (${sign(s.change_1d_pct)}). Over 5 trading days ${sign(s.change_5d_pct)}, over 1 month ${sign(s.change_1m_pct)}. 52-week range ${s.low_52w}-${s.high_52w}. Source: ${s.source}.${adjusted}`;
+  return `${s.name} (${s.ticker}, ${s.exchange}), prices in ${s.currency}. As of ${s.as_of}: ${price} ${s.close}, previous close ${s.prev_close} (${sign(s.change_1d_pct)}). Over 5 trading days ${sign(s.change_5d_pct)}, over 1 month ${sign(s.change_1m_pct)}. 52-week range ${s.low_52w}-${s.high_52w}. Source: ${s.source}.`;
 }

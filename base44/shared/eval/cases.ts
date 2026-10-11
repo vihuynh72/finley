@@ -50,7 +50,7 @@ export const NETFLIX_2023: EvalCase = {
     "2022 quarterly revenue: Q1 $7.87B, Q2 $7.97B, Q3 $7.93B.",
     "2022 paid net adds: Q1 -0.2M, Q2 -0.97M, Q3 +2.41M; Q4 guidance +4.5M (October 18, 2022).",
     "In October 2022 Netflix said revenue, not membership, would be its primary top-line metric and stopped guiding memberships.",
-    "Share price at the December 30, 2022 close: $294.88 (before the November 2025 10-for-1 split).",
+    "Share price at the December 30, 2022 close: $294.88.",
   ],
   quarters: [
     { id: "2023-Q1", label: "Q1 2023", span: "Jan–Mar 2023", start: "2023-01-01", end: "2023-03-31", actual: 8.16, unit: "USD B", source: NFLX_LETTERS, check: true },

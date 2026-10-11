@@ -29,7 +29,7 @@ export const pairsFor = (searches: Search[], windows: Window[]): Pair[] =>
 
 // "3 weeks ago" counts back from the day of the search, years after the cutoff, so a coarse relative
 // date can't place a story on either side of it. Hours and days ago resolve to after the cutoff anyway.
-const COARSE = /^(\d+|an?)\s+(week|month|year)s?\s+ago$/i;
+const COARSE = /^(\d+|an?)\s+(week|month|year|wks?|mos?|yrs?)s?\s+ago$/i;
 
 export function screen(a: SearchResult, cutoff: string, lookbackFrom: string, fetchedAt: Date) {
   const raw = (a.date || "").trim();

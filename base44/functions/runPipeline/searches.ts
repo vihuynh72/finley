@@ -22,7 +22,8 @@ export function planSearches(client: Record<string, any>, plan: PlanLike): Searc
     ...(client.competitors || []).slice(0, 3).map((name: string): Search => ({ query: name, lens: "competitor" })),
   ];
   if (!plan?.exposures?.length) {
-    return [...core, { query: `${client.industry} regulation`, lens: "regulation" }, { query: `${client.industry} market outlook`, lens: "market" }];
+    const industry = client.industry || client.name;
+    return [...core, { query: `${industry} regulation`, lens: "regulation" }, { query: `${industry} market outlook`, lens: "market" }];
   }
   const seen = new Set(core.map((s) => (s.query || "").toLowerCase()));
   const ranked = [...plan.exposures].sort((a, b) => (RANK[a.sensitivity] ?? 1) - (RANK[b.sensitivity] ?? 1));
