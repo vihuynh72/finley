@@ -7,7 +7,7 @@ export interface Pnl { revenue: number; gross_margin_pct: number; ebitda: number
 export interface ImpactParams { pnl_line: string; shock_pct: number; exposure_pct: number; pass_through_pct: number }
 
 export const NO_CHANGE: Levers = { price_change_pct: 0, volume_change_pct: 0, cogs_change_pct: 0, opex_change_pct: 0, multiple_change: 0 };
-const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number(n) || 0));
+const clamp = (n: number | undefined, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number(n) || 0));
 // Round half away from zero, so a loss rounds like the matching gain (-1.75 -> -1.8, as +1.75 -> +1.8).
 // The tiny relative nudge absorbs float error: (1 - 0.0175) - 1 is -0.017499999999999982, not -0.0175.
 const round = (n: number, places: number) => Math.sign(n) * Math.round(Math.abs(n) * (1 + 1e-12) * 10 ** places) / 10 ** places;

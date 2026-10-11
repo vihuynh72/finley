@@ -1,6 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
-import { X } from "lucide-react";
-import { fmtM, topicName, type Finding } from "@/lib/data";
+import { Copy, MailQuestion, X } from "lucide-react";
+import { useState } from "react";
+import { fmtM, topicName, type Client, type Finding } from "@/lib/data";
+import type { Outcome } from "@/lib/live";
 import { PIPELINE_WEIGHTS, scoreFinding } from "@/lib/scores";
 import { ScoreChip } from "./ScoreChips";
 import { useApp } from "@/lib/store";
@@ -11,8 +13,41 @@ export const sevCls: Record<Finding["severity"], string> = {
   urgent: "border-danger-line bg-danger-soft text-danger-ink", review: "border-warning-line bg-warning-soft text-warning-ink", info: "border-border bg-muted text-subtle",
 };
 const CONF = { low: 1, medium: 2, high: 3 };
+export const OC_LABEL: Record<Outcome, string> = { held: "Held up", did_not_hold: "Didn't hold", unclear: "Can't tell" };
 // Only web links become hrefs: a source URL comes from a news search and could be anything.
 const safeUrl = (u?: string) => (u && /^https?:\/\//i.test(u) ? u : undefined);
+
+// The verification question, pre-filled: what would change the view, the facts seen, and the sources,
+// ready to send to whoever owns the number.
+const ownerDraft = (c: Client, f: Finding) => [
+  `Quick check before the next reforecast — can you confirm this for ${c.name}?`,
+  ``,
+  `Question: ${f.changeView || `Is the ${topicName(c, f.topicId)} view still right?`}`,
+  ``,
+  `What we're seeing: ${f.title}`,
+  ...f.facts.slice(0, 3).map((x) => `· ${x}`),
+  `Sources: ${f.sources.map((s) => (s.url ? `${s.name} (${s.url})` : s.name)).join("; ") || "none listed"}`,
+  ``,
+  `Is this right, and has anything changed on your side?`,
+].join("\n");
+
+function AskOwner({ c, f }: { c: Client; f: Finding }) {
+  const app = useApp();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(() => ownerDraft(c, f));
+  return (
+    <div>
+      <button className="btn" onClick={() => setOpen((o) => !o)}><MailQuestion size={12} /> Ask the owner</button>
+      {open && (
+        <div className="mt-2 space-y-2">
+          <p className="text-[11px] text-muted-foreground">A question for whoever owns this number — edit, copy, send it your usual way. Nothing is sent.</p>
+          <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={9} className="w-full rounded-md border bg-background p-2 text-xs leading-relaxed" />
+          <button className="btn" onClick={() => { navigator.clipboard?.writeText(draft); app.notify("Question copied"); }}><Copy size={12} /> Copy question</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function FindingDrawer() {
   const app = useApp();
@@ -21,6 +56,7 @@ export function FindingDrawer() {
   const client = app.client;
   if (!f || !client) return null;
   const st = app.findingStatus(f.id);
+  const oc = app.findingOutcome(f.id);
   const sc = scoreFinding(client, f, app.overrides);
   const act = (s: "review" | "research" | "dismissed") => { app.setFindingStatus(f.id, s); app.openDrawer(null); };
 
@@ -102,6 +138,21 @@ export function FindingDrawer() {
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">What would change this view</p>
             <p>{f.changeView || "Not stated."}</p>
           </div>
+          <div>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Did it hold up?</p>
+            {oc ? (
+              <p className="text-sm"><b>{OC_LABEL[oc.outcome]}.</b> <span className="text-muted-foreground">
+                {oc.source === "analyst" ? "Your call" : oc.source === "backtest" ? "Judged in the backtest" : `Judged by a later scan${oc.at ? ` · ${oc.at}` : ""}`}{oc.reason ? ` — ${oc.reason}` : ""}
+              </span></p>
+            ) : <p className="text-sm text-muted-foreground">Not resolved yet — a later scan marks it when the news settles it.</p>}
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(["held", "did_not_hold", "unclear"] as const).map((v) => (
+                <button key={v} className={cn("btn", oc?.outcome === v && oc.source === "analyst" && "btn-primary")} onClick={() => app.setOutcome(f.id, v)}>{OC_LABEL[v]}</button>
+              ))}
+              {oc?.source === "analyst" && <button className="btn" onClick={() => app.setOutcome(f.id, "")}>Clear</button>}
+            </div>
+          </div>
+          <AskOwner key={f.id} c={client} f={f} />
           <label className="block">
             <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Note</span>
             <textarea value={app.notes[f.id] ?? ""} onChange={(e) => app.setNote(f.id, e.target.value)} rows={3}

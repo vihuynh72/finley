@@ -1,9 +1,9 @@
 // Frontend mappers (src/lib) under Deno: run with --unstable-sloppy-imports for the extensionless imports.
 import assert from "node:assert/strict";
 import { NETFLIX_2023 } from "../../base44/shared/eval/cases.ts";
-import { dbStatus, scanLabel, shortDate, toClient, uiStatus } from "../../src/lib/live.ts";
+import { dbStatus, scanLabel, shortDate, toClient, toOutcome, uiStatus } from "../../src/lib/live.ts";
 import { recsFor } from "../../src/lib/recs.ts";
-import { combinedDelta, defaultClientValues, ebitdaDelta, financials } from "../../src/lib/model.ts";
+import { combinedDelta, defaultClientValues, ebitdaDelta, financials, findingsDelta } from "../../src/lib/model.ts";
 
 const plan = { exposures: [
   { name: "Password sharing crackdown", category: "company_specific", driver: "Paid memberships", why: "Paid sharing could add members", sensitivity: "high", keywords: ["Netflix password sharing"] },
@@ -47,6 +47,14 @@ Deno.test("review statuses round-trip between the dashboard and Finding.review_s
   assert.equal(uiStatus(undefined), "open");
 });
 
+Deno.test("finding outcomes map to the drawer shape; anything unjudged stays null", () => {
+  assert.deepEqual(toOutcome({ outcome: "held", outcome_reason: "Hynix confirmed the hike", outcome_source: "pipeline", outcome_at: "2026-09-12" }),
+    { outcome: "held", reason: "Hynix confirmed the hike", source: "pipeline", at: "2026-09-12" });
+  assert.deepEqual(toOutcome({ outcome: "did_not_hold" }), { outcome: "did_not_hold", reason: "", source: "pipeline", at: "" });
+  assert.equal(toOutcome({}), null);
+  assert.equal(toOutcome({ outcome: "maybe" }), null); // an unexpected value is unresolved, not shown
+});
+
 Deno.test("recommendations follow fixed rules from the strongest finding per tab", () => {
   const c = toClient(client, plan, [finding, { ...finding, id: "f2", exposure: "Content production costs", effect: "challenged", confidence: 4,
     impact_inputs: { pnl_line: "cogs", shock_pct: 8, exposure_pct: 30 }, title: "Writers' strike threatens 2023 slate", change_view: "How long the strike lasts" }]);
@@ -66,6 +74,29 @@ Deno.test("date labels", () => {
   assert.equal(shortDate("2026-10-08", now), "Oct 8");
   assert.equal(scanLabel("", now), "never");
   assert.match(scanLabel("2026-10-10T09:40:00Z", now), /^today, /);
+});
+
+Deno.test("the overview's implied delta uses the pipeline's finding impact, in dashboard terms", () => {
+  const c = toClient(client, plan, [{ ...finding, id: "f9", impact: { revenue_pct: -2, cost_pct: 5, margin_pts: -1 } }]);
+  const f = c.findings[0];
+  assert.deepEqual(f.impact, { revenue_pct: -2, cost_pct: 5, margin_pts: -1 });
+  const d = findingsDelta(c, [f]);
+  assert.equal(d.rev, c.base.rev * -0.02);
+  assert.equal(d.cogs, c.base.cogs * 0.05);
+  assert.equal(d.opex, 0);
+});
+
+Deno.test("a percent impact lands on a regulation tab's dollar driver as dollars", () => {
+  const regPlan = { exposures: [{ name: "EU content quota", category: "regulation_policy", driver: "", why: "Local quotas", sensitivity: "low" }] };
+  const c = toClient(client, regPlan, [{ ...finding, id: "f10", exposure: "EU content quota", topic_key: "regulation",
+    impact_inputs: { pnl_line: "opex", shock_pct: 0.5, exposure_pct: 100 } }]);
+  const sc = c.findings[0].scenario!;
+  assert.ok(sc);
+  // opex $6171m x 0.5% x 100% = $30.855m a year -> $30,855K, snapped to the driver's step
+  const d = c.topics["eu-content-quota"].drivers[0];
+  const expected = Math.min(d.max, Math.max(d.min, Math.round(6171 * 0.5 * 100 / 10 / d.step) * d.step));
+  assert.equal(sc.cost, expected);
+  assert.ok(sc.cost > 0);
 });
 
 Deno.test("a regulation finding found only by company searches still lands on the regulation tab", async () => {
