@@ -5,7 +5,7 @@ const FAQ: [string, string][] = [
   ["Does Finley change my forecast?", "No. It flags and explains. You decide what goes into the model."],
   ["Where does the data come from?", "Live news search across trade press, company statements and government sources, collected through Bright Data. Every finding links to its sources."],
   ["How accurate is it?", "Each finding carries materiality, reliability and confidence scores, and code caps confidence when evidence is thin. Impacts are illustrative scenarios, not forecasts."],
-  ["Is my client data safe?", "Client profiles stay in your workspace. Only search terms and public articles are sent to the analysis models."],
+  ["Is my client data safe?", "The profiles you enter and the public news Finley collects are sent to Anthropic's Claude API to plan searches and analyze developments. Finley never sees or edits your forecast model. During the pilot, everyone signed in to your Finley workspace can see its clients, so enter only figures you are comfortable sharing with them."],
 ];
 
 export function FaqSection() {
