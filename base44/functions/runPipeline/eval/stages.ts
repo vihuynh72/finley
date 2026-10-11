@@ -170,7 +170,7 @@ async function score(x: Ctx): Promise<Rec> {
     corpus: ev.corpus_stats ?? {}, caveats: c.caveats,
     unchecked_answers: [...c.quarters, ...c.kpis, ...c.questions, ...c.actions].filter((a) => a.check).length,
   };
-  return { stage: "done", judgments: j, summary, finished_at: new Date().toISOString() };
+  return { stage: "done", judgments: j, summary, judge_model: model || MODEL, finished_at: new Date().toISOString() };
 }
 
 const STAGES: Record<string, (x: Ctx) => Promise<Rec>> = { plan, collect, analyze, forecast, score };
