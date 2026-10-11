@@ -54,6 +54,8 @@
   --color-sidebar-hover: var(--sidebar-hover);
   --color-sidebar-border: var(--sidebar-border);
   --color-subtle: var(--subtle);
+  --color-olive: var(--olive);
+  --color-faint: var(--faint);
   --color-danger-line: var(--danger-line);
   --color-warning-line: var(--warning-line);
 }
@@ -77,6 +79,8 @@
   --muted: #F1F1EB;
   --muted-foreground: #83847B;
   --subtle: #5F6059;
+  --olive: #9DB246;
+  --faint: #C9C9BE;
   --accent: #E4E4DC;
   --accent-foreground: #1B1C18;
   --destructive: #DC2626;
@@ -155,6 +159,8 @@
   --sidebar-hover: oklch(1 0 0 / 0.16);
   --sidebar-border: oklch(1 0 0 / 0.24);
   --subtle: oklch(0.8 0.01 255);
+  --olive: #B9CF5A;
+  --faint: oklch(0.45 0.01 255);
   --danger-line: #5A1F22;
   --warning-line: #4A4218;
 }
