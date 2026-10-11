@@ -102,6 +102,14 @@ const TO_DB: Record<FindingStatus, string> = { open: "pending", review: "validat
 export const uiStatus = (s: string | undefined): FindingStatus => TO_UI[s || "pending"] ?? "open";
 export const dbStatus = (s: FindingStatus) => TO_DB[s];
 
+// Finding.outcome: how the flag turned out, judged by a later scan ("pipeline") or by the analyst.
+export type Outcome = "held" | "did_not_hold" | "unclear";
+export interface FindingOutcome { outcome: Outcome; reason: string; source: string; at: string }
+export const toOutcome = (f: Rec): FindingOutcome | null =>
+  ["held", "did_not_hold", "unclear"].includes(f["outcome"])
+    ? { outcome: f["outcome"] as Outcome, reason: f["outcome_reason"] || "", source: f["outcome_source"] || "pipeline", at: f["outcome_at"] || "" }
+    : null;
+
 // "today, 7:40 AM", "yesterday, 9:12 PM", "Oct 3, 9:12 PM", or "never".
 export function scanLabel(iso: string, now = new Date()): string {
   const t = Date.parse(iso);

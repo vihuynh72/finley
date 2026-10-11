@@ -1,7 +1,7 @@
 // Frontend mappers (src/lib) under Deno: run with --unstable-sloppy-imports for the extensionless imports.
 import assert from "node:assert/strict";
 import { NETFLIX_2023 } from "../../base44/shared/eval/cases.ts";
-import { dbStatus, scanLabel, shortDate, toClient, uiStatus } from "../../src/lib/live.ts";
+import { dbStatus, scanLabel, shortDate, toClient, toOutcome, uiStatus } from "../../src/lib/live.ts";
 import { recsFor } from "../../src/lib/recs.ts";
 import { combinedDelta, defaultClientValues, ebitdaDelta, financials, findingsDelta } from "../../src/lib/model.ts";
 
@@ -45,6 +45,14 @@ Deno.test("without a plan, the client's assumptions stand in as tabs", () => {
 Deno.test("review statuses round-trip between the dashboard and Finding.review_status", () => {
   for (const s of ["open", "review", "research", "dismissed"] as const) assert.equal(uiStatus(dbStatus(s)), s);
   assert.equal(uiStatus(undefined), "open");
+});
+
+Deno.test("finding outcomes map to the drawer shape; anything unjudged stays null", () => {
+  assert.deepEqual(toOutcome({ outcome: "held", outcome_reason: "Hynix confirmed the hike", outcome_source: "pipeline", outcome_at: "2026-09-12" }),
+    { outcome: "held", reason: "Hynix confirmed the hike", source: "pipeline", at: "2026-09-12" });
+  assert.deepEqual(toOutcome({ outcome: "did_not_hold" }), { outcome: "did_not_hold", reason: "", source: "pipeline", at: "" });
+  assert.equal(toOutcome({}), null);
+  assert.equal(toOutcome({ outcome: "maybe" }), null); // an unexpected value is unresolved, not shown
 });
 
 Deno.test("recommendations follow fixed rules from the strongest finding per tab", () => {

@@ -19,9 +19,13 @@ export interface LeadAdvice {
   action: string; kind: string; development_ids: string[]; candidate_id: string;
   rationale: string; check_first: string; confidence: number; horizon: string;
 }
+export interface LeadOutcome {
+  finding_id: string; verdict: string; basis: string; development_ids: string[];
+}
 export interface LeadOutput {
   findings: LeadFinding[];
   advice: LeadAdvice[];
+  outcomes: LeadOutcome[];
   outlook: { verdict: string; summary: string; conditions: { if_condition: string; then_effect: string; signpost: string }[] };
   watchlist: { indicator: string; threshold: string; why: string }[];
 }
@@ -50,6 +54,12 @@ const LEAD_SCHEMA = obj({
     confidence: score("How worth raising this is: evidence strength plus economic size, same honesty as the rubric"),
     horizon: choice(["now", "this_quarter", "next_12_months"], "When inaction starts costing"),
   }), "0 to 4 decision-level suggestions for the analyst's client conversation. Only what the evidence supports; empty is a valid answer."),
+  outcomes: list(obj({
+    finding_id: str("The [P#] label of the earlier finding it settles, e.g. P2"),
+    verdict: choice(["held", "did_not_hold"], "held: later news shows the flagged effect materialised; did_not_hold: events proved it wrong"),
+    basis: str("One sentence on what settled it, for the analyst"),
+    development_ids: list(str(), "The developments that settle it"),
+  }), "Earlier findings today's news settles. Only ones clearly settled by cited developments; most stay unresolved and are left out. Empty is normal."),
   outlook: obj({
     verdict: choice(["positive", "negative", "mixed", "neutral"], "If today's developments persist, is the company better or worse off?"),
     summary: str("2 to 3 sentences: will the company do well if these developments continue, and why?"),
@@ -67,6 +77,7 @@ Rules:
 - Never invent numbers: money figures come only from the computed candidates. A development with source_check="failed" did not match its source, so it can't carry a finding alone.
 - Give the analyst decision advice, not just findings: opportunities worth pursuing, positions worth reducing or exiting, risks worth preparing for. Phrase every item as an option to evaluate, never a directive - the analyst and their client decide.
 - Match conviction to evidence: "exit_or_reduce" only when the economics or corroborated evidence make standing still clearly costly; otherwise "investigate" or "monitor". If you can't name what would prove the advice wrong, don't give it.
+- Close the loop on earlier findings: when today's developments settle one - the flagged effect materialised (held) or events proved it wrong (did_not_hold) - report it in outcomes, citing the developments that settle it. An open question staying open is not a verdict; leave those out, and never re-judge a finding whose outcome is already set.
 - Plain English for a finance reader. Never put ids in prose fields.`;
 
 const RUBRIC = `Scoring, integers 1-5, checked by code afterwards:
@@ -87,7 +98,7 @@ export function runCompanyLead(input: LeadInput, opts: { deadline: number; usage
   const refs = (list: string[]) => [...new Set((list || []).map((id) => String(id).trim().toUpperCase()).map((id) => input.mergedInto[id] || id))].join(",");
   const ledger = (thesis.ledger || []).map((l: any) => `[${l.assumption_index}] ${client.assumptions?.[l.assumption_index]?.text ?? "?"}: against ${refs(l.challenging_ids) || "none"}; for ${refs(l.supporting_ids) || "none"}. Counterpoint: ${l.strongest_counterpoint || "none"}`).join("\n");
   const checks = (thesis.profile_checks || []).map((p: any) => `${p.profile_area} (${p.relation}): ${p.finding} [${refs(p.development_ids)}]`).join("\n");
-  const prior = input.prior.map((f) => `- ${String(f.created_date || "").slice(0, 10)} "${f.title}" (${f.review_status}${f.feedback ? `; analyst: ${f.feedback}` : ""}${f.incorporate ? "; included in advice" : ""})`).join("\n");
+  const prior = input.prior.map((f, i) => `- [P${i + 1}] ${String(f.created_date || "").slice(0, 10)} "${f.title}" (${f.review_status}${f.outcome ? `; outcome: ${f.outcome} (${f.outcome_source || "pipeline"})` : "; unresolved"}${f.feedback ? `; analyst: ${f.feedback}` : ""}${f.incorporate ? "; included in advice" : ""})`).join("\n");
   const market = picture ? `${picture.headline}\n${picture.overview}${picture.conflicts.map((c) => `\nSources disagree: ${c.question} ${c.assessment}`).join("")}` : "Not available this scan.";
   return runAgent<LeadOutput>({
     name: "company/lead", system: RULES, schema: LEAD_SCHEMA, deadline: opts.deadline, effort: opts.effort,

@@ -164,6 +164,31 @@
       "default": "pending",
       "description": "Analyst decision. Dashboard terms: pending = open, validated = added to forecast review, needs_research = needs research, rejected = dismissed"
     },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "held",
+        "did_not_hold",
+        "unclear"
+      ],
+      "description": "How the flag turned out, judged against later news"
+    },
+    "outcome_source": {
+      "type": "string",
+      "enum": [
+        "pipeline",
+        "analyst"
+      ],
+      "description": "Who judged the outcome; analyst-set outcomes are never overwritten by the pipeline"
+    },
+    "outcome_at": {
+      "type": "string",
+      "description": "ISO day the outcome was judged"
+    },
+    "outcome_reason": {
+      "type": "string",
+      "description": "One sentence on what settled it"
+    },
     "feedback": {
       "type": "string"
     },

@@ -149,6 +149,25 @@ export function buildAdvice(x: { advice: any[]; developments: CheckedDevelopment
   }).filter((a) => a.action && (a.development_ids.length || a.economics));
 }
 
+// The lead's outcome verdicts on earlier findings, checked by code like everything else it writes:
+// the P-label must be an earlier finding, the verdict held or did_not_hold, and at least one cited
+// development must be grounded. Analyst-set outcomes are never overwritten, so they are skipped here.
+export function resolveOutcomes(outcomes: { finding_id: string; verdict: string; basis: string; development_ids: string[] }[] | undefined,
+  prior: Record<string, any>[], developments: CheckedDevelopment[], mergedInto: Record<string, string>) {
+  const grounded = new Set(developments.filter((d) => d.grounded).map((d) => d.id));
+  const byLabel = new Map(prior.map((f, i) => [`P${i + 1}`, f]));
+  const seen = new Set<string>();
+  return (outcomes || []).flatMap((o) => {
+    const pf = byLabel.get(String(o?.finding_id || "").trim().toUpperCase());
+    const verdict = canon(o?.verdict, ["held", "did_not_hold"], "");
+    if (!pf || !verdict || pf["outcome_source"] === "analyst" || seen.has(pf.id)) return [];
+    const cited = [...new Set((o.development_ids || []).map((id) => mergedInto[String(id).trim().toUpperCase()] || String(id).trim().toUpperCase()))];
+    if (!cited.some((id) => grounded.has(id))) return [];
+    seen.add(pf.id);
+    return [{ id: pf.id, outcome: verdict, reason: String(o.basis || "").slice(0, 400) }];
+  });
+}
+
 // Assumption statuses follow fixed rules from the thesis tester's evidence links: grounded evidence
 // against only -> challenged, for only -> supported, both -> under_review, none -> unchanged. Only
 // status and a dated note change; the analyst's text, driver and order are never touched.

@@ -99,6 +99,20 @@ function Overview() {
   const healthy = watchedStates.filter((s) => s === "Holding" || s === "Supported").length;
   const share = watched.length ? healthy / watched.length : null;
 
+  // Track record: findings whose outcome is judged — by a later scan, the analyst, or the backtest's
+  // judge (findingOutcome covers all three). "Held" counts only resolved flags; unclear isn't a win.
+  const track = useMemo(() => {
+    const rows = client.findings.map((f) => ({ f, o: app.findingOutcome(f.id) }));
+    const res = rows.filter((x) => x.o?.outcome === "held" || x.o?.outcome === "did_not_hold");
+    const val = res.filter((x) => { const s = app.findingStatus(x.f.id); return s === "review" || s === "research"; });
+    const dis = res.filter((x) => app.findingStatus(x.f.id) === "dismissed");
+    return {
+      resolved: res.length, held: res.filter((x) => x.o!.outcome === "held").length,
+      valN: val.length, valHeld: val.filter((x) => x.o!.outcome === "held").length,
+      disN: dis.length, disRight: dis.filter((x) => x.o!.outcome === "did_not_hold").length,
+    };
+  }, [client.findings, app]);
+
   const rank = { urgent: 0, review: 1, info: 2 };
   const listed = (showAll ? openFindings : openUrgent).slice().sort((a, b) => rank[a.severity] - rank[b.severity]);
   const days = client.reforecastDue ? Math.ceil((Date.parse(`${client.reforecastDue}T12:00:00Z`) - Date.now()) / dayMs) : null;
@@ -162,6 +176,24 @@ function Overview() {
           </div>
           <p className="pt-4 text-xl font-medium">Hello {firstName}</p>
           <p className="text-sm text-muted-foreground">{app.clients.length} client{app.clients.length === 1 ? "" : "s"} under watch</p>
+          <div className="mt-4 w-full rounded-2xl border border-muted p-3 text-left">
+            <p className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground">Track record · {client.name}</p>
+            {track.resolved ? (
+              <>
+                <p className="mt-1 text-sm font-medium"><span className="num">{track.held}</span> of {track.resolved} resolved flags held up</p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                  {track.valN ? `${track.valHeld} of ${track.valN} you validated held` : ""}{track.valN && track.disN ? " · " : ""}
+                  {track.disN ? `${track.disRight} of ${track.disN} dismissals were right` : ""}
+                  {!track.valN && !track.disN ? "Judged against later news, not opinion" : ""}
+                </p>
+              </>
+            ) : (
+              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                Builds as flags resolve — a later scan marks each one held or didn't hold, and you can mark it yourself in the finding.{" "}
+                <Link to="/evals" className="font-medium text-foreground hover:underline">See the backtest</Link>
+              </p>
+            )}
+          </div>
           <div className="mt-6 w-full space-y-1 rounded-2xl bg-muted p-4">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground">Next reforecast</span>
@@ -217,6 +249,15 @@ function Overview() {
           <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
             {(["Challenged", "Under pressure", "Supported", "Holding"] as const).map((s) => <span key={s}>{s} {watchedStates.filter((x) => x === s).length}</span>)}
             {client.topicOrder.length - watched.length > 0 && <span>No data {client.topicOrder.length - watched.length}</span>}
+          </div>
+          {/* One click on a challenged assumption opens the topic, where its findings are listed. */}
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {watched.filter((t) => app.topicStatus(t) === "Challenged" || app.topicStatus(t) === "Under pressure").map((t) => (
+              <Link key={t} to="/topics/$topicId" params={{ topicId: t }}
+                className="rounded-full border border-muted px-2.5 py-1 text-[10px] font-medium text-subtle hover:border-border hover:text-foreground">
+                {topicName(client, t)} · {app.topicStatus(t)}
+              </Link>
+            ))}
           </div>
         </div>
       </div>

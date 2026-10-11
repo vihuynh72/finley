@@ -7,7 +7,7 @@ import { buildCharts, buildScenarios } from "./charts.ts";
 import { runCompanyTeam } from "./company.ts";
 import { buildCorpus, coverageNote, marketContext, type RawArticle, type Search } from "./corpus.ts";
 import { checkResearch } from "./evidence.ts";
-import { buildAdvice, buildFindings, updateAssumptions } from "./findings.ts";
+import { buildAdvice, buildFindings, resolveOutcomes, updateAssumptions } from "./findings.ts";
 import { quantifyCandidates } from "./impacts.ts";
 import { runCompanyLead } from "./lead.ts";
 import { buildMarketPicture } from "./picture.ts";
@@ -86,6 +86,16 @@ export async function runAgentPipeline(ctx: { base44: any; user: any; run_id: st
   const advice = buildAdvice({ advice: lead?.advice ?? [], developments, mergedInto, candidates, articles: corpus.articles });
   const created = built.records.length ? await base44.entities.Finding.bulkCreate(built.records) : [];
   const saved = Array.isArray(created) && created.length === built.records.length ? created : built.records;
+
+  // Close the loop: outcomes the lead judged against today's news are written back onto the earlier
+  // findings they settle, so the dashboard's track record grows as scans run.
+  try {
+    for (const o of resolveOutcomes(lead?.outcomes ?? [], prior, developments, mergedInto)) {
+      await base44.entities.Finding.update(o.id, { outcome: o.outcome, outcome_at: corpus.today, outcome_source: "pipeline", outcome_reason: o.reason });
+    }
+  } catch (e) {
+    errors.push(`outcomes: ${(e as Error).message}`);
+  }
 
   // Findings are saved, so from here a failure no longer fails the run: it is recorded and the briefing
   // is marked partial (a failed run would hide saved findings, and the next run would skip them as repeats).

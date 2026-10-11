@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { base44 } from "@/api/base44Client";
 import type { Client, Finding, Status, TopicId, Values } from "./data";
 import { baseValues, presetValues, topicValues, type ClientValues } from "./model";
-import { dbStatus, scanLabel, toClient, uiStatus, type FindingStatus } from "./live";
+import { dbStatus, scanLabel, toClient, toOutcome, uiStatus, type FindingOutcome, type FindingStatus, type Outcome } from "./live";
 import type { RecStatus } from "./recs";
 import type { Overrides, Tier } from "./scores";
 
@@ -32,6 +32,7 @@ interface Ctx {
   applyPreset: (t: TopicId, p: Exclude<Preset, "custom">) => void;
   useFinding: (f: Finding) => void;
   findingStatus: (id: string) => FindingStatus; setFindingStatus: (id: string, s: FindingStatus) => void;
+  findingOutcome: (id: string) => FindingOutcome | null; setOutcome: (id: string, o: Outcome | "") => void;
   notes: Record<string, string>; setNote: (id: string, n: string) => void;
   openCount: (t: TopicId) => { count: number; urgent: boolean };
   topicStatus: (t: TopicId) => Status;
@@ -73,6 +74,7 @@ async function loadClient(id: string) {
   return {
     client: toClient(rec, items(plans)[0], fs),
     statuses: Object.fromEntries(fs.map((f) => [f["id"], uiStatus(f["review_status"])])) as Record<string, FindingStatus>,
+    outcomes: Object.fromEntries(fs.map((f) => [f["id"], toOutcome(f)] as const).filter(([, o]) => o)) as Record<string, FindingOutcome>,
     notes: Object.fromEntries(fs.filter((f) => f["feedback"]).map((f) => [f["id"], String(f["feedback"])])) as Record<string, string>,
     saved: items(scenarios).filter((s) => s["values"] && typeof s["values"] === "object")
       .map((s): SavedScenario => ({ id: s["id"], clientId: id, name: s["name"] || s["question"] || "Scenario", created: dateLabel(s["created_date"]), values: s["values"] })),
@@ -106,6 +108,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [presets, setPresets] = useState<Record<string, Record<TopicId, Preset>>>({});
   const [tagsAll, setTags] = useState<Record<string, Record<TopicId, Record<string, string>>>>({});
   const [fs, setFs] = useState<Record<string, FindingStatus>>({});
+  const [outs, setOuts] = useState<Record<string, FindingOutcome | null>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [recs, setRecs] = useState<Record<string, Record<string, RecStatus>>>({});
   const [overridesAll, setOverridesAll] = useState<Record<string, Overrides>>({});
@@ -163,6 +166,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     const overrides = overridesAll[cid] ?? data?.overrides ?? {};
     const recStatus = recs[cid] ?? data?.recStatus ?? {};
+    // Backtest findings carry the judge's verdict in the EvalRun rather than Finding.outcome; the
+    // dashboard treats both as "how the flag turned out". An analyst-set outcome always wins.
+    const evalVerdicts = new Map<string, Outcome>();
+    if (client?.evalCase) for (const r of ((data?.evalRun?.["summary"]?.["findings"]?.["rows"] ?? []) as Record<string, any>[])) {
+      if (r?.["id"] && r["held"]) evalVerdicts.set(r["id"], r["held"]);
+    }
+    const findingOutcome = (id: string): FindingOutcome | null =>
+      (id in outs ? outs[id] : (data?.outcomes[id] ?? null)) ??
+      (evalVerdicts.has(id) ? { outcome: evalVerdicts.get(id)!, reason: "Judged in the backtest against what happened", source: "backtest", at: "" } : null);
     // Signed-out visitors can browse and try every control, but nothing they do is written to the
     // shared records; the toast says so.
     const unsaved = user ? "" : " · not saved, sign in to keep it";
@@ -205,6 +217,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         notify(`Scenario sliders filled from “${f.title}”`);
       },
       findingStatus,
+      findingOutcome,
+      setOutcome: (id, o) => {
+        setOuts((x) => ({ ...x, [id]: o ? { outcome: o, reason: "", source: "analyst", at: new Date().toISOString().slice(0, 10) } : null }));
+        if (user) base44.entities.Finding.update(id, o
+          ? { outcome: o, outcome_source: "analyst", outcome_at: new Date().toISOString(), outcome_reason: "" }
+          : { outcome: null, outcome_source: null, outcome_at: null, outcome_reason: null }).catch((e) => notify(`Couldn't save the outcome: ${e.message}`));
+        notify((o === "held" ? "Marked held" : o === "did_not_hold" ? "Marked didn't hold" : o === "unclear" ? "Marked can't tell" : "Outcome cleared") + unsaved);
+      },
       setFindingStatus: (id, s) => {
         saveStatus([id], s);
         notify((s === "review" ? "Added to forecast review" : s === "research" ? "Marked as needs research" : s === "dismissed" ? "Dismissed as not material" : "Reopened") + unsaved);
@@ -279,7 +299,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         notify((tier === null ? `Reset tier for ${name}` : `${name} set to Tier ${tier}`) + unsaved);
       },
     };
-  }, [clientId, client, data, user, me.isLoading, navigate, clients, clientsQ.isLoading, clientsQ.error, clientQ.isLoading, clientQ.error, vals, presets, tagsAll, fs, notes, recs, overridesAll, scanning, scanStage, toast, drawer, notify, refresh, follow, qc]);
+  }, [clientId, client, data, user, me.isLoading, navigate, clients, clientsQ.isLoading, clientsQ.error, clientQ.isLoading, clientQ.error, vals, presets, tagsAll, fs, outs, notes, recs, overridesAll, scanning, scanStage, toast, drawer, notify, refresh, follow, qc]);
 
   return <C.Provider value={value}>{children}</C.Provider>;
 }

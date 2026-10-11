@@ -4,10 +4,17 @@ import { topicName, type Finding } from "@/lib/data";
 import { scoreFinding } from "@/lib/scores";
 import { useApp } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { sevCls } from "./FindingDrawer";
+import { OC_LABEL, sevCls } from "./FindingDrawer";
 import { ScoreChips } from "./ScoreChips";
 
 const STATUS_LABEL = { open: "", review: "In review", research: "Needs research", dismissed: "Dismissed" };
+
+// Distinct outlets behind a finding: "2 outlets" reads as corroboration, "single source" as the
+// caveat it is. Counts names, not URLs, so syndicated copies don't inflate it.
+const outletLabel = (f: Finding) => {
+  const n = new Set(f.sources.map((s) => s.name)).size;
+  return n === 0 ? "no sources" : n === 1 ? "single source" : `${n} outlets`;
+};
 
 // "overview" = the Overview page's rows (topic label in olive, a chevron, no slider button).
 export function FindingList({ findings, showTopic, variant = "page" }: { findings: Finding[]; showTopic?: boolean; variant?: "page" | "overview" }) {
@@ -21,6 +28,7 @@ export function FindingList({ findings, showTopic, variant = "page" }: { finding
       <div className="space-y-3">
         {rows.map(({ f, s }) => {
           const st = app.findingStatus(f.id);
+          const oc = app.findingOutcome(f.id);
           return (
             <button key={f.id} onClick={() => app.openDrawer(f)}
               className={cn("flex w-full items-center gap-4 rounded-2xl border border-muted bg-popover p-4 text-left hover:border-border", st === "dismissed" && "opacity-50")}>
@@ -29,7 +37,7 @@ export function FindingList({ findings, showTopic, variant = "page" }: { finding
                 <span className="block text-sm font-medium">{f.title}</span>
                 <span className="flex flex-wrap items-center gap-3 text-[10px]">
                   <span className="font-bold uppercase tracking-[0.25px] text-olive">{topicName(client, f.topicId)}</span>
-                  <span className="font-medium text-muted-foreground">{f.date} · <span className="capitalize">{f.confidence}</span> confidence · {f.sources.map((x) => x.type).join(", ") || "no sources"}{STATUS_LABEL[st] ? ` · ${STATUS_LABEL[st]}` : ""}</span>
+                  <span className="font-medium text-muted-foreground">{f.date} · <span className="capitalize">{f.confidence}</span> confidence · {outletLabel(f)} · {f.sources.map((x) => x.type).join(", ") || "untyped"}{STATUS_LABEL[st] ? ` · ${STATUS_LABEL[st]}` : ""}{oc ? ` · ${OC_LABEL[oc.outcome]}` : ""}</span>
                 </span>
                 <ScoreChips s={s} />
               </span>
@@ -44,6 +52,7 @@ export function FindingList({ findings, showTopic, variant = "page" }: { finding
     <div className="space-y-3">
       {rows.map(({ f, s }) => {
         const st = app.findingStatus(f.id);
+        const oc = app.findingOutcome(f.id);
         return (
           <div key={f.id} className={cn("flex items-center gap-6 rounded-2xl border bg-popover p-4", st === "dismissed" && "opacity-50")}>
             <span className={cn("w-[58px] shrink-0 rounded border px-2 py-0.5 text-center text-[9px] font-bold uppercase", sevCls[f.severity])}>{f.severity}</span>
@@ -51,7 +60,7 @@ export function FindingList({ findings, showTopic, variant = "page" }: { finding
               <span className="block text-sm font-medium hover:underline">{f.title}</span>
               <span className="block text-[10px] font-medium text-muted-foreground">
                 {showTopic && <Link to="/topics/$topicId" params={{ topicId: f.topicId }} className="text-foreground hover:underline" onClick={(e) => e.stopPropagation()}>{topicName(client, f.topicId)}</Link>}
-                {showTopic && " · "}{f.date} · <span className="capitalize">{f.confidence}</span> confidence · {f.sources.map((x) => x.type).join(", ") || "no sources"}
+                {showTopic && " · "}{f.date} · <span className="capitalize">{f.confidence}</span> confidence · {outletLabel(f)} · {f.sources.map((x) => x.type).join(", ") || "untyped"}{oc ? ` · ${OC_LABEL[oc.outcome]}` : ""}
               </span>
               <ScoreChips s={s} />
             </button>
