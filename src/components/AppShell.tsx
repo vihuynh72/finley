@@ -93,7 +93,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="relative inline-flex items-center">
               <select value={app.clientId} onChange={(e) => app.setClientId(e.target.value)}
                 className="appearance-none rounded-lg border bg-card py-1.5 pl-3 pr-8 text-sm font-semibold text-foreground">
-                {app.clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {app.clients.map((c) => <option key={c.id} value={c.id}>{c.name}{c.evalCase ? " (backtest)" : ""}</option>)}
               </select>
               <ChevronDown size={14} className="pointer-events-none -ml-6 block shrink-0 self-center text-muted-foreground" />
             </span>
