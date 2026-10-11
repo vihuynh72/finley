@@ -26,6 +26,8 @@ export const score = (description: string) => describe({ type: "integer", enum: 
 // Clamp anyway, as a second line of defence before scores reach Base44 and the alert rule.
 export const clampScore = (value: unknown) => Math.min(5, Math.max(1, Math.round(Number(value) || 1)));
 
-// Nor do they guarantee enum casing ("Input_Costs"), so map values back onto the allowed list.
+// Nor do they guarantee enum casing or separators ("Input_Costs", "input costs"), so map values
+// back onto the allowed list after normalizing case and punctuation.
+const scrub = (value: unknown) => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
 export const canon = (value: unknown, allowed: readonly string[], fallback: string) =>
-  allowed.find((a) => a === String(value ?? "").trim().toLowerCase()) ?? fallback;
+  allowed.find((a) => a === scrub(value)) ?? fallback;

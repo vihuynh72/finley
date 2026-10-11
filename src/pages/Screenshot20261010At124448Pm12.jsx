@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import DashboardHeader from "@/components/figma/DashboardHeader";
 import TopicSidebar from "@/components/figma/TopicSidebar";
 import AssumptionGrid from "@/components/figma/AssumptionGrid";
+import AdvicePanel from "@/components/figma/AdvicePanel";
 import EbitdaCharts from "@/components/figma/EbitdaCharts";
 import UrgentFindingsList from "@/components/figma/UrgentFindingsList";
 import SavedScenariosView from "@/components/figma/SavedScenariosView";
@@ -59,8 +60,15 @@ export default function Screenshot20261010At124448Pm12() {
     enabled: !!clientId,
   });
 
+  const { data: briefingPage } = useQuery({
+    queryKey: ["briefing", clientId, refreshKey],
+    queryFn: () => base44.entities.Briefing.filter({ client_id: clientId }, { sort: "-created_date", limit: 1 }),
+    enabled: !!clientId,
+  });
+
   const findings = findingsPage?.items || [];
   const scenarios = scenariosPage?.items || [];
+  const briefing = briefingPage?.items?.[0] || null;
 
   const { run, active, start } = usePipelineRun(clientId, () => {
     setRefreshKey((k) => k + 1);
@@ -128,6 +136,7 @@ export default function Screenshot20261010At124448Pm12() {
             ) : (
               <>
                 <AssumptionGrid client={client} findings={findings} activeTopic={activeTopic} />
+                <AdvicePanel briefing={briefing} />
                 <EbitdaCharts client={client} findings={findings} />
                 <UrgentFindingsList findings={findings} activeTopic={activeTopic} onUpdateFinding={updateFinding} />
               </>

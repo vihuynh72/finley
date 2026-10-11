@@ -14,22 +14,19 @@ export const UI_TOPICS: Record<string, string> = { input_costs: "Input costs", p
   demand_customers: "Demand and customers", logistics_freight: "Logistics and freight", regulation: "Regulation" };
 export const FACT_BASES = ["confirmed_event", "company_statement", "official_data", "analyst_estimate", "forecast", "unconfirmed_report", "opinion"] as const;
 export const MOVEMENTS = ["up", "down", "flat", "volatile", "new", "ended"] as const;
-export const TIMEFRAMES = ["immediate", "near_term", "long_term"] as const;
 
 export interface Development {
   title: string; fact: string; quote: string; article_ids: string[]; fact_basis: string; topic: string;
-  variable: string; movement: string; quantities: { value_text: string; what: string }[]; timeframe: string; interpretation: string;
+  variable: string; movement: string; quantities: { value_text: string; what: string }[]; interpretation: string;
 }
 export interface ResearchOutput {
-  dispositions: { article_id: string; status: string }[];
+  name_collision_ids: string[];
   developments: Development[];
   indicators: { name: string; value_text: string; as_of: string; article_ids: string[] }[];
   gaps: string[];
 }
 
 const RESEARCH_SCHEMA = obj({
-  dispositions: list(obj({ article_id: str('Id of an article marked yours="true", e.g. A3'),
-    status: choice(["used", "irrelevant", "name_collision", "duplicate"]) }), "Exactly one entry per article you own"),
   developments: list(obj({
     title: str("Short neutral headline for the event"),
     fact: str("What happened, past tense, attributed: '<Outlet> reported on <date> that ...'. Only what the cited text states."),
@@ -40,11 +37,11 @@ const RESEARCH_SCHEMA = obj({
     variable: str("What moved, e.g. 'DRAM contract prices' or 'Contoso list prices'"),
     movement: choice(MOVEMENTS),
     quantities: list(obj({ value_text: str("A number exactly as written in the source, e.g. '20%'"), what: str("What the number measures") })),
-    timeframe: choice(TIMEFRAMES),
     interpretation: str("Industry-level meaning in at most 2 sentences, without saying whether it helps or hurts the client"),
   }), "At most 6, most significant first. An empty list is a valid answer."),
   indicators: list(obj({ name: str("e.g. 'DRAM contract price'"), value_text: str("Value as written, with its unit"),
-    as_of: str("Date as written, or ''"), article_ids: list(str()) }), "Market indicators that come with a stated value"),
+    as_of: str("Date as written, or ''"), article_ids: list(str()) }), "At most 4 market indicators that come with a stated value, most important first"),
+  name_collision_ids: list(str(), 'Ids of articles marked yours="true" that are about a different organization with a similar name'),
   gaps: list(str(), "At most 3 material blind spots: important parts of your remit these articles say nothing about"),
 });
 
@@ -57,12 +54,12 @@ Rules:
 - Write each fact in the past tense with attribution, e.g. "Reuters reported on 2026-10-08 that ...". Copy the quote word for word. Every number in a fact or a quantity must appear in the cited text.
 - Label fact_basis honestly: plans, forecasts, "sources say" reports and opinion pieces are not confirmed events.
 - Stay neutral. Describe what moved (variable and movement), not whether it is good or bad for the client; another team decides that.
-- Give every article marked yours="true" exactly one disposition. Use name_collision for an article about a different organization with a similar name, and irrelevant for stock-ticker pages, listicles and other noise.
+- Skip stock-ticker pages, listicles and other noise. List articles about a different organization with a similar name in name_collision_ids.
 - Prefer a few material developments over many minor ones. An empty list is better than filler.
 - Never put article ids in prose fields; ids belong only in the id fields.`;
 
 const OWNERS: { name: string; lenses: Lens[]; remit: string }[] = [
-  { name: "research/company", lenses: ["company"], remit: "News about the client itself: results and guidance, customer wins or losses, launches, pricing moves, leadership changes, financing, legal or regulatory action, operational problems. Watch for articles about a different organization with a similar name." },
+  { name: "research/company", lenses: ["company"], remit: "News about the client itself: results and guidance, customer wins or losses, launches, pricing moves, leadership changes, financing, legal or regulatory action, operational problems. Watch for articles about a different organization with a similar name: articles carry mentions_client=\"true\" when the client name appears in the text, but that flag alone doesn't prove the article is about this client." },
   { name: "research/competitors", lenses: ["competitor"], remit: "What the named competitors did: price changes, launches, capacity changes, funding, mergers and acquisitions, partnerships, customer wins or losses, results and guidance." },
   { name: "research/market", lenses: ["regulation", "market"], remit: "The industry around the client: customer demand and growth, input and supply costs (for example component or commodity prices), logistics, industry-wide pricing, new technology and substitutes, regulation and policy, macro and financing conditions." },
 ];

@@ -24,6 +24,9 @@ export default function ClientForm() {
     const data = { ...f, competitors: f.competitors.split(",").map((s) => s.trim()).filter(Boolean), assumptions: f.assumptions.filter((a) => a.text) };
     NUM.forEach(([k]) => { data[k] = data[k] === "" || data[k] == null ? undefined : Number(data[k]); });
     const c = await base44.entities.Client.create(data);
+    // Fire-and-forget: the keyword planner maps this profile's external forces into the Bright Data
+    // searches every scan runs. Without a plan the pipeline falls back to generic searches.
+    base44.functions.invoke("planKeywords", { client_id: c.id }).catch(() => {});
     navigate(`/clients/${c.id}`);
   };
 

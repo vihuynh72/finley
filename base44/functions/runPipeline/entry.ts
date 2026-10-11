@@ -45,6 +45,13 @@ export default async function (req) {
     const client = await base44.entities.Client.get(run.client_id);
     const profile = profileText(client);
 
+    // One run per client at a time: a second run would double-count findings and fight over
+    // assumption statuses. Best-effort check; runs older than 6 minutes count as dead.
+    const siblings = await base44.entities.Run.filter({ client_id: client.id }, { sort: "-created_date", limit: 5 }).catch(() => null);
+    const inFlight = (siblings?.items || []).find((r) => r.id !== run_id && !["done", "failed"].includes(r.stage)
+      && Date.now() - Date.parse(r.created_date || "") < 6 * 60_000);
+    if (inFlight) return Response.json({ error: `Run ${inFlight.id} is already in progress for this client` }, { status: 409 });
+
     // 1. Collection via Bright Data
     await base44.entities.Run.update(run_id, { stage: "collecting" });
     // Searches come from the client's latest keyword plan (planKeywords); no plan means the original fixed list.

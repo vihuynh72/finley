@@ -45,8 +45,9 @@ export async function buildMarketPicture(research: CheckedResearch, context: str
   return applyPicture(research.developments, answer);
 }
 
-// Applies the lead's merges (the kept development gains the duplicates' articles and outlets) and
-// keeps every reference pointing at a development that still exists. Adds a dated timeline.
+// Applies the lead's merges (the kept development gains the duplicates' articles and outlets, and their
+// verified wording if its own failed the source check) and keeps every reference pointing at a
+// development that still exists, even through chains of merges. Adds a dated timeline.
 export function applyPicture(developments: CheckedDevelopment[], picture: MarketPicture) {
   const byId = new Map(developments.map((d) => [d.id, { ...d }]));
   const mergedInto: Record<string, string> = {};
@@ -57,6 +58,9 @@ export function applyPicture(developments: CheckedDevelopment[], picture: Market
       const dup = byId.get(id);
       if (!dup || id === m.keep_id || mergedInto[id]) continue;
       mergedInto[id] = m.keep_id;
+      for (const k of Object.keys(mergedInto)) if (mergedInto[k] === id) mergedInto[k] = m.keep_id; // close chains
+      if (!keep.grounded && dup.grounded) Object.assign(keep, { fact: dup.fact, quote: dup.quote, quantities: dup.quantities, fact_basis: dup.fact_basis, grounded: true });
+      keep.headline_only = keep.headline_only && dup.headline_only;
       keep.article_ids = [...new Set([...keep.article_ids, ...dup.article_ids])];
       keep.outlets = [...new Set([...keep.outlets, ...dup.outlets])];
       keep.date = [keep.date, dup.date].sort().pop() || "";
