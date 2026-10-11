@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, Download, Loader2, ShieldCheck } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Download, Loader2, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Section } from "@/components/bits";
@@ -32,7 +32,6 @@ const errText = (e: unknown) => (e as Error)?.message || String(e);
 function Evals() {
   const app = useApp();
   const qc = useQueryClient();
-  const nav = useNavigate();
   // Every case can be run live; a case with a published snapshot opens on it.
   const published = publishedCases();
   const cases = Object.keys(EVAL_CASES);
@@ -93,7 +92,6 @@ function Evals() {
       setExporting(false);
     }
   };
-  const openClient = () => { const ev = done ?? latest; if (ev?.client_id) { app.setClientId(ev.client_id); nav({ to: "/dashboard" }); } };
 
   const corpus: Rec | undefined = view?.corpus;
   const runCard = (
@@ -210,26 +208,12 @@ function Evals() {
           </div>
         )}
 
-        <div className="flex items-start gap-3 rounded-2xl border border-warning-line bg-warning-soft p-4 text-sm text-warning-ink">
-          <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-          <div className="space-y-1">
-            <p>
-              <b>Read with care.</b> {view.caveat} {view.unchecked ? `${view.unchecked} answer-key figures are still marked unchecked against ${view.company}'s filings.` : ""}
-              {view.kind === "live" && (
-                <>
-                  {" "}Run finished {new Date(view.finishedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.{" "}
-                  <button className="underline" onClick={openClient}>Open the backtest client's dashboard</button> to see what Finley showed on {dayLabel(view.cutoff)}.
-                </>
-              )}
-            </p>
-            {view.kind === "published" && !!p?.errors.length && (
-              <details className="text-xs">
-                <summary className="cursor-pointer">{p.errors.length} non-fatal problem{p.errors.length === 1 ? " was" : "s were"} recorded during the run</summary>
-                <ul className="mt-1 list-disc pl-5">{p.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
-              </details>
-            )}
-          </div>
-        </div>
+        {view.kind === "published" && !!p?.errors.length && (
+          <details className="px-1 text-xs text-muted-foreground">
+            <summary className="cursor-pointer">{p.errors.length} non-fatal problem{p.errors.length === 1 ? " was" : "s were"} recorded during the run</summary>
+            <ul className="mt-1 list-disc pl-5">{p.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+          </details>
+        )}
 
         {view.kind === "published" && view.saw && <SawPanel saw={view.saw} cutoff={view.cutoff} />}
       </div>

@@ -91,6 +91,12 @@ export function BridgeChart({ start, steps, startLabel = "Base EBITDA", endLabel
     run += s.value;
   }
   rows.push({ name: endLabel, inv: 0, val: run, kind: "total", raw: run });
+  // Zoom the axis to the range the bridge moves through, so small steps stay visible.
+  const levels = rows.flatMap((r) => (r.kind === "total" ? [r.raw] : [r.inv, r.inv + r.val]));
+  const lo = Math.min(...levels), hi = Math.max(...levels);
+  const pad = (hi - lo || Math.abs(hi) * 0.1) * 0.6;
+  // Loss-making clients (negative EBITDA) need the axis to go below zero, or every bar is hidden.
+  const floor = lo >= 0 ? Math.max(0, lo - pad) : lo - pad;
   const tiny = Math.max(Math.abs(start), 1) * 0.001;
   const color = (r: { kind: string; raw: number }) => (r.kind === "total" ? palette.total : Math.abs(r.raw) < tiny ? palette.zero : r.kind === "up" ? palette.up : palette.down);
   return (
@@ -99,7 +105,7 @@ export function BridgeChart({ start, steps, startLabel = "Base EBITDA", endLabel
         {grid}
         <XAxis dataKey="name" interval={0} axisLine={false} tickLine={false} height={rows.length > 6 ? 64 : 58}
           tick={rows.length > 6 ? <RotatedTick /> : <MultiTick maxChars={rows.length > 4 ? 12 : 16} maxLines={3} />} />
-        <YAxis tick={axis} axisLine={false} tickLine={false} tickFormatter={(v) => fmtM(v)} width={64} domain={[0, "auto"]} />
+        <YAxis tick={axis} axisLine={false} tickLine={false} tickFormatter={(v) => fmtM(v)} width={64} domain={[floor, "auto"]} allowDataOverflow />
         <Tooltip cursor={{ fill: "var(--muted)" }} contentStyle={tipStyle} itemStyle={{ color: "var(--foreground)" }} labelStyle={{ color: "var(--foreground)" }}
           formatter={(_v, n, p) => (n === "val" ? [p.payload.kind === "total" ? fmtM(p.payload.raw) : fmtM(p.payload.raw, true), "EBITDA"] : [null, null])} />
         <Bar dataKey="inv" stackId="a" fill="transparent" isAnimationActive={anim} />
@@ -154,11 +160,11 @@ export function PerformanceChart({ data, label }: { data: { month: string; base:
     <ResponsiveContainer width="100%" height={300}>
       <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
         {grid}
-        <XAxis dataKey="month" tick={{ ...axis, fontSize: 10 }} axisLine={false} tickLine={false} />
+        <XAxis dataKey="month" tick={{ ...axis, fontSize: 10 }} axisLine={false} tickLine={false} interval={3} tickFormatter={(v) => String(v).split(" ")[0]} />
         <YAxis tick={{ ...axis, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => fmtM(v)} width={64} domain={["auto", "auto"]} />
         <Tooltip contentStyle={tipStyle} cursor={{ stroke: "var(--muted-foreground)", strokeDasharray: "4 4" }}
           formatter={(v, n) => [fmtM(Number(v)), n === "scenario" ? `${label}, current scenario` : `${label}, plan`]} />
-        <Area dataKey="scenario" stroke="var(--chart)" strokeWidth={5} fill="var(--chart)" fillOpacity={0.15} isAnimationActive={false}
+        <Area type="linear" dataKey="scenario" stroke="var(--chart)" strokeWidth={2.5} fill="var(--chart)" fillOpacity={0.15} isAnimationActive={false}
           activeDot={{ r: 7, fill: "var(--strong)", stroke: "#fff", strokeWidth: 3 }} dot={false} />
         <Line dataKey="base" stroke="var(--base-line)" strokeWidth={1.5} strokeDasharray="4 4" dot={false} isAnimationActive={false} />
       </ComposedChart>

@@ -341,7 +341,7 @@ export function topicsFromPlan(client: Record<string, any>, plan: { exposures?: 
 // Driver values that express an impact estimate (the impact estimator's inputs) on a topic, for the
 // frontend's "Use in scenario" button. Only drivers with a matching role and line are filled.
 export interface ImpactInputs { pnl_line: string; shock_pct: number; exposure_pct: number; pass_through_pct?: number }
-export function scenarioFor(spec: Pick<TopicSpec, "drivers">, inputs: ImpactInputs | null | undefined): Values | undefined {
+export function scenarioFor(spec: Pick<TopicSpec, "drivers">, inputs: ImpactInputs | null | undefined, base?: Delta): Values | undefined {
   if (!inputs || !Number(inputs.shock_pct)) return undefined;
   const on = spec.drivers.filter((d) => d.role && (!d.line || d.line === inputs.pnl_line));
   const shock = on.find((d) => d.role === "shock");
@@ -350,8 +350,16 @@ export function scenarioFor(spec: Pick<TopicSpec, "drivers">, inputs: ImpactInpu
   const pass = on.find((d) => d.role === "pass_through");
   const snap = (d: DriverSpec, n: number) => Math.min(d.max, Math.max(d.min, Math.round(n / d.step) * d.step));
   const out: Values = {};
-  // Without an exposure slider the shock applies to the whole line, so scale it by the exposed share.
-  out[shock.id] = snap(shock, exposure ? Number(inputs.shock_pct) : Number(inputs.shock_pct) * (Number(inputs.exposure_pct) || 100) / 100);
+  if (shock.unit === "usdK") {
+    // A percent impact on a dollar slider (regulation's yearly cost): convert through the line's
+    // annual dollars — lineBase $M x shock% x exposure% x 1000 = $K, i.e. /10.
+    if (!base) return undefined;
+    const lineBase = inputs.pnl_line === "opex" ? base.opex : inputs.pnl_line === "cogs" ? base.cogs : base.rev;
+    out[shock.id] = snap(shock, lineBase * Number(inputs.shock_pct) * (Number(inputs.exposure_pct) || 100) / 10);
+  } else {
+    // Without an exposure slider the shock applies to the whole line, so scale it by the exposed share.
+    out[shock.id] = snap(shock, exposure ? Number(inputs.shock_pct) : Number(inputs.shock_pct) * (Number(inputs.exposure_pct) || 100) / 100);
+  }
   if (exposure) out[exposure.id] = snap(exposure, Number(inputs.exposure_pct) || 0);
   if (pass && inputs.pass_through_pct != null) out[pass.id] = snap(pass, Number(inputs.pass_through_pct) || 0);
   return out;

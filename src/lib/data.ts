@@ -23,6 +23,9 @@ export interface Finding {
   facts: string[]; sources: Source[];
   interpretation: string; changeView: string;
   scenario?: Values;
+  // The pipeline's quantified impact (shared/finance.ts findingImpact): revenue_pct is a revenue
+  // lever, cost_pct folds the COGS+opex effect onto the cogs line, margin_pts is the EBITDA-margin delta.
+  impact?: { revenue_pct: number; cost_pct: number; margin_pts: number };
   nextStep: string; assumptions: string[];
   scores: { materiality: number; confidence: number; urgency: number; priority: number }; // the pipeline's 1-5 scores
   pipelineScores?: { priority: number; materiality: number; relevance: number; confidence: number; urgency: number }; // 0-100, when the pipeline computed them

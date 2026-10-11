@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Check, ChevronDown, ChevronRight, Copy } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, ChevronRight, Clock, Copy, X } from "lucide-react";
 import { fmtM } from "@/lib/data";
 import { financials } from "@/lib/model";
 import { fmtK, recsFor, type Rec } from "@/lib/recs";
@@ -92,11 +92,11 @@ function RecCard({ r, evidence, live }: { r: Rec; evidence: boolean; live: boole
         <p className="num text-[11px] text-muted-foreground">{r.formula}</p>
       </div>
       <div className="flex flex-wrap gap-2 pt-1">
-        <button className="btn btn-primary" onClick={() => app.setRecStatus(r.id, "accepted", r.type === "Change assumption" ? r.findings : undefined)}>Accept</button>
-        <button className="btn" onClick={() => app.setRecStatus(r.id, "snoozed")}>Snooze</button>
-        <button className="btn" onClick={() => app.setRecStatus(r.id, "dismissed")}>Dismiss</button>
+        <button className="inline-flex items-center gap-1.5 rounded-full bg-[#4CAF50] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#43A047]" onClick={() => app.setRecStatus(r.id, "accepted", r.type === "Change assumption" ? r.findings : undefined)}><Check size={12} /> Accept</button>
+        <button className="inline-flex items-center gap-1.5 rounded-full border border-warning-line bg-warning-soft px-4 py-1.5 text-xs font-semibold text-warning-ink hover:brightness-95" onClick={() => app.setRecStatus(r.id, "snoozed")}><Clock size={12} /> Snooze</button>
+        <button className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-danger-ink hover:bg-danger-soft" onClick={() => app.setRecStatus(r.id, "dismissed")}><X size={12} /> Dismiss</button>
         {primary?.scenario && (
-          <button className="btn" onClick={() => { app.useFinding(primary); nav({ to: "/topics/$topicId", params: { topicId: primary.topicId }, hash: "builder" }); }}>Open in scenario builder</button>
+          <button className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-foreground px-4 py-1.5 text-xs font-semibold text-foreground hover:bg-foreground hover:text-background" onClick={() => { app.useFinding(primary); nav({ to: "/topics/$topicId", params: { topicId: primary.topicId }, hash: "builder" }); }}>Open in scenario builder <ArrowUpRight size={12} /></button>
         )}
         {r.draft && <button className="btn" onClick={() => setDraftOpen((o) => !o)}>Draft question for client</button>}
       </div>

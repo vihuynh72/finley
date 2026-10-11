@@ -1,10 +1,10 @@
 import { secrets } from "base44:runtime";
 
-export async function claudeJSON(system, prompt, maxTokens = 4000) {
+export async function claudeJSON(system: string, prompt: string, maxTokens = 4000) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
-      "x-api-key": secrets.get("ANTHROPIC_API_KEY"),
+      "x-api-key": secrets.get("ANTHROPIC_API_KEY") || "",
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
     },
@@ -18,11 +18,11 @@ export async function claudeJSON(system, prompt, maxTokens = 4000) {
   });
   if (!res.ok) throw new Error("Claude API " + res.status + ": " + (await res.text()));
   const data = await res.json();
-  const text = data.content.map((c) => c.text || "").join("");
+  const text = data.content.map((c: { text?: string }) => c.text || "").join("");
   return JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
 }
 
-export function profileText(c) {
+export function profileText(c: Record<string, any>) {
   return `Company: ${c.name} (${c.industry || ""})
 Business model: ${c.business_model || ""}
 Revenue streams: ${c.revenue_streams || ""}
@@ -32,5 +32,5 @@ Strategic objectives: ${c.strategic_objectives || ""}
 Competitors: ${(c.competitors || []).join(", ")}
 Financials (USD m): revenue ${c.annual_revenue}, gross margin ${c.gross_margin_pct}%, opex ${c.opex}, EV/EBITDA ${c.ev_ebitda_multiple}x
 Key assumptions:
-${(c.assumptions || []).map((a, i) => `[${i}] ${a.text} (driver: ${a.driver})`).join("\n")}`;
+${(c.assumptions || []).map((a: any, i: number) => `[${i}] ${a.text} (driver: ${a.driver})`).join("\n")}`;
 }
