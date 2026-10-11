@@ -177,15 +177,6 @@ function Evals() {
     <div className="space-y-10">
       {header}
 
-      <div className="flex items-start gap-3 rounded-2xl border border-warning-line bg-warning-soft p-4 text-sm text-warning-ink">
-        <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-        <p>
-          <b>Read with care.</b> {s.caveats?.[1] ?? ""} {s.unchecked_answers ? `${s.unchecked_answers} answer-key figures are still marked unchecked against ${c.company}'s filings.` : ""}{" "}
-          Run finished {new Date(done!.finished_at || done!.updated_date).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.{" "}
-          <button className="underline" onClick={openClient}>Open the backtest client's dashboard</button> to see what Finley showed on {dayLabel(c.cutoff)}.
-        </p>
-      </div>
-
       <Section title={`A. ${c.company} ${c.horizon.label.toLowerCase()} quarterly revenue`}>
         <div className="glass p-6">
           <div className="mb-2 flex flex-wrap gap-4 text-xs text-muted-foreground">

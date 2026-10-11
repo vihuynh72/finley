@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BellOff, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Download, Lightbulb, Loader2, MoreHorizontal, Siren, type LucideIcon } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { BellOff, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Download, Lightbulb, Loader2, MoreHorizontal, Siren } from "lucide-react";
+import { useMemo, useState, type ComponentType, type ReactNode } from "react";
+type LucideIcon = ComponentType<{ size?: number }>;
 import { fmtM, topicName, type TopicId } from "@/lib/data";
 import { downloadFindingsCsv } from "@/lib/export";
 import { combinedPreset, ebitdaDelta, financials, findingsDelta, monthly, sumDeltas } from "@/lib/model";
@@ -37,7 +38,6 @@ function Stat({ icon: I, label, value, badge, foot, href }: { icon: LucideIcon; 
       <p className="pt-1 text-sm font-medium text-subtle">{label}</p>
       <div className="flex h-[52px] items-start gap-2">
         <span className="num text-[32px] font-light leading-10 tracking-[-0.64px]">{value}</span>
-        {badge && <span className="mt-[19px] rounded-full bg-strong px-2 py-0.5 text-xs font-semibold text-[#F5F6EF]">{badge}</span>}
       </div>
       <a href={href} className="flex items-center justify-between border-t border-muted pt-4 text-xs font-medium text-subtle hover:text-foreground">
         {foot} <ChevronRight size={12} />
@@ -139,7 +139,7 @@ function Overview() {
               {PERIODS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
           </label>
-          <button className="flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_8px_20px_rgba(211,239,99,0.35)] disabled:opacity-60"
+          <button className="flex items-center gap-2 rounded-full bg-[#4CAF50] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(76,175,80,0.35)] hover:bg-[#43A047] disabled:cursor-not-allowed disabled:opacity-100"
             onClick={app.scan} disabled={app.scanning || !!client.evalCase} title={client.evalCase ? "Backtest clients are frozen at their cutoff; run them from Evals" : undefined}>
             {app.scanning ? <><Loader2 size={14} className="animate-spin" /> {app.scanStage || "Scanning"}…</> : "Scan sources now"}
           </button>
@@ -169,10 +169,10 @@ function Overview() {
       <div className="grid grid-cols-[322px_minmax(0,1fr)] gap-4">
         <div className={cn(card, "flex flex-col items-center px-6 pb-6 pt-6")}>
           <div className="relative">
-            <span className="grid h-24 w-24 place-items-center rounded-full border-[3px] border-primary p-1">
-              <span className="grid h-full w-full place-items-center rounded-full bg-tint text-2xl font-semibold">{initials(String(app.user?.["full_name"] || app.user?.["email"] || "?"))}</span>
+            <span className="grid h-24 w-24 place-items-center rounded-full bg-primary text-3xl font-semibold text-primary-foreground ring-4 ring-tint ring-offset-2 ring-offset-card">
+              {initials(String(app.user?.["full_name"] || app.user?.["email"] || "?"))}
             </span>
-            <span className="absolute right-0 top-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground shadow-[0_0_0_4px_var(--card)]">FP&A</span>
+            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full border-2 border-card bg-foreground px-2 py-0.5 text-[10px] font-bold text-background">FP&A</span>
           </div>
           <p className="pt-4 text-xl font-medium">Hello {firstName}</p>
           <p className="text-sm text-muted-foreground">{app.clients.length} client{app.clients.length === 1 ? "" : "s"} under watch</p>
@@ -207,19 +207,22 @@ function Overview() {
           </div>
           <div className="mt-6 w-full space-y-3">
             <p className="text-[11px] font-bold uppercase tracking-[0.55px] text-muted-foreground">Other clients</p>
-            <div className="flex pl-2">
+            <div className="flex flex-wrap gap-2">
               {others.slice(0, 3).map((c) => (
                 <button key={c.id} title={c.name} onClick={() => app.setClientId(c.id)}
-                  className="-ml-2 grid h-8 w-8 place-items-center rounded-full border-2 border-popover bg-tint text-[10px] font-bold">{initials(c.name)}</button>
+                  className="flex items-center gap-2 rounded-full border bg-popover py-1 pl-1 pr-3 text-xs font-medium hover:border-foreground">
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{initials(c.name)}</span>
+                  {c.name}
+                </button>
               ))}
-              {others.length > 3 && <span className="-ml-2 grid h-8 w-8 place-items-center rounded-full border-2 border-popover bg-primary text-[10px] font-bold text-primary-foreground">+{others.length - 3}</span>}
+              {others.length > 3 && <span className="grid h-8 place-items-center rounded-full bg-muted px-3 text-xs font-bold">+{others.length - 3}</span>}
               {!others.length && <Link to="/clients/new" className="text-xs text-subtle hover:text-foreground">Add a client</Link>}
             </div>
           </div>
         </div>
 
         <div className={cn(card, "space-y-6 p-6")}>
-          <CardHead title="Financial performance" right={
+          <CardHead title={`Financial performance · FY${client.evalCase && client.reforecastDue ? client.reforecastDue.slice(0, 4) : new Date().getFullYear()} plan year`} right={
             <label className="relative flex items-center gap-2 rounded-full border bg-popover px-4 py-1.5 text-[11px] font-bold text-subtle">
               {metric === "ebitda" ? "EBITDA" : "Revenue"} <ChevronDown size={8} />
               <select aria-label="Measure" value={metric} onChange={(e) => setMetric(e.target.value as "ebitda" | "rev")} className="absolute inset-0 cursor-pointer opacity-0">
@@ -228,7 +231,7 @@ function Overview() {
             </label>
           } />
           <PerformanceChart data={months} label={metric === "ebitda" ? "EBITDA" : "Revenue"} />
-          <Formula>Month = plan-year {metric === "ebitda" ? "EBITDA" : "revenue"} × seasonality weight. Lime = your slider changes plus the open findings' implied impact ({fmtM(metric === "ebitda" ? comb.ebitda : comb.rev)} a year); dashed = plan ({fmtM(metric === "ebitda" ? base.ebitda : base.rev)}); the band spans every topic's downside-to-upside presets.</Formula>
+          <Formula>Week = plan-year {metric === "ebitda" ? "EBITDA" : "revenue"} × seasonality weight ÷ 4, with illustrative week-to-week swings (±6%). Lime = your slider changes plus the open findings' implied impact ({fmtM(metric === "ebitda" ? comb.ebitda : comb.rev)} a year); dashed = plan ({fmtM(metric === "ebitda" ? base.ebitda : base.rev)}); the band spans every topic's downside-to-upside presets.</Formula>
         </div>
       </div>
 
@@ -236,8 +239,8 @@ function Overview() {
         <div className={cn(card, "space-y-6 p-6")}>
           <CardHead title="Combined scenario EBITDA bridge" right={<Link to="/scenarios" aria-label="Prompt scenarios" className="text-muted-foreground hover:text-foreground"><MoreHorizontal size={16} /></Link>} />
           <BridgeChart start={base.ebitda} steps={steps} startLabel="Base" endLabel="Combined" height={300}
-            palette={{ total: "var(--chart)", up: "var(--olive)", down: "var(--strong)", zero: "var(--border)" }} />
-          <Formula>Combined EBITDA = {fmtM(base.ebitda)} {steps.map((s) => `${s.value >= 0 ? "+" : "−"} ${fmtM(Math.abs(s.value))}`).join(" ")} = {fmtM(comb.ebitda)}. Each step is the topic's sliders where you set them, else the implied impact of its open findings.</Formula>
+            palette={{ total: "var(--chart)", up: "var(--olive)", down: "var(--danger)", zero: "var(--border)" }} />
+          <Formula>Combined EBITDA = {fmtM(base.ebitda)} {steps.filter((s) => Math.abs(s.value) > 0.5).map((s) => `${s.value >= 0 ? "+" : "−"} ${fmtM(Math.abs(s.value))}`).join(" ")} = {fmtM(comb.ebitda)}. Each step is the topic's sliders where you set them, else the implied impact of its open findings.</Formula>
         </div>
         <div className={cn(card, "flex flex-col gap-4 p-6")}>
           <CardHead title="Assumption health" right={<span title="Topics whose assumptions are holding or supported by the open findings" className="text-muted-foreground"><MoreHorizontal size={16} /></span>} />
