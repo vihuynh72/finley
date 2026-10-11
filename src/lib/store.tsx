@@ -22,6 +22,7 @@ interface Ctx {
   // Pages are readable without signing in (as on main); anything that writes or spends tokens asks first.
   needsSignIn: boolean; requireSignIn: (why: string) => boolean;
   briefing: Record<string, any> | null; // the latest scan's Briefing: market picture, outlook, decision advice
+  evalRun: Record<string, any> | null; // a backtest client's latest scored EvalRun (null for live clients)
   clients: ClientSummary[]; clientsLoading: boolean;
   client: Client | null; clientLoading: boolean; loadError: string;
   clientId: string; setClientId: (id: string) => void;
@@ -64,6 +65,10 @@ async function loadClient(id: string) {
     E.Run.filter({ client_id: id }, { sort: "-created_date", limit: 1 }),
     E.Briefing.filter({ client_id: id }, { sort: "-created_date", limit: 1 }).catch(() => null),
   ]);
+  // A backtest client is never analyst-reviewed; its scorecard comes from the judged EvalRun.
+  const evalRuns = rec?.["eval_case"]
+    ? await E.EvalRun.filter({ client_id: id, stage: "done" }, { sort: "-created_date", limit: 1 }).catch(() => null)
+    : null;
   const fs = items(findings);
   return {
     client: toClient(rec, items(plans)[0], fs),
@@ -75,6 +80,7 @@ async function loadClient(id: string) {
     recStatus: (rec["rec_decisions"] || {}) as Record<string, RecStatus>,
     latestRun: items(runs)[0] ?? null,
     briefing: items(briefings)[0] ?? null,
+    evalRun: items(evalRuns)[0] ?? null,
   };
 }
 
@@ -178,6 +184,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false;
       },
       briefing: data?.briefing ?? null,
+      evalRun: data?.evalRun ?? null,
       clients, clientsLoading: clientsQ.isLoading, client, clientLoading: clientQ.isLoading,
       loadError: String((clientsQ.error as Error)?.message || (clientQ.error as Error)?.message || ""),
       clientId: cid, setClientId: (id) => { setPicked(id); store("finley.client", id); setDrawer(null); },

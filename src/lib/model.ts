@@ -1,4 +1,4 @@
-import { type Client, type Delta, type Topic, type TopicId, type Values, MONTHS, SEASONALITY } from "./data";
+import { type Client, type Delta, type Finding, type Topic, type TopicId, type Values, MONTHS, SEASONALITY } from "./data";
 
 export const baseValues = (t: Topic): Values => Object.fromEntries(t.drivers.map((d) => [d.id, d.base]));
 export const presetValues = (t: Topic, p: "base" | "downside" | "upside"): Values =>
@@ -50,3 +50,9 @@ export const topicValues = (c: Client, vals: ClientValues | undefined, t: TopicI
 export const combinedDelta = (c: Client, vals: ClientValues) =>
   sumDeltas(c.topicOrder.map((t) => c.topics[t].compute(topicValues(c, vals, t))));
 export const combinedPreset = (c: Client, p: "downside" | "upside") => sumDeltas(c.topicOrder.map((t) => c.topics[t].compute(presetValues(c.topics[t], p))));
+
+// The delta a set of findings implies, in the pipeline's own dashboard terms: each finding's impact
+// revenue_pct is a revenue lever and cost_pct folds the COGS+opex effect onto the cogs line
+// (shared/finance.ts findingImpact), so summing them recovers the pipeline's dollar effects.
+export const findingsDelta = (c: Client, fs: Finding[]): Delta =>
+  sumDeltas(fs.filter((f) => f.impact).map((f) => ({ rev: c.base.rev * f.impact!.revenue_pct / 100, cogs: c.base.cogs * f.impact!.cost_pct / 100, opex: 0 })));
