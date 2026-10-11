@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test:backend": "deno test --no-config --import-map tests/backend/import_map.json tests/backend/",
     "preview": "vite preview",
-    "test:frontend": "deno test --no-config --unstable-sloppy-imports --no-check tests/frontend/"
+    "test:frontend": "deno test --no-config --unstable-sloppy-imports --no-check tests/frontend/",
+    "backtest": "deno run --no-config --import-map scripts/backtest/import_map.json --allow-env=TZ,ANTHROPIC_API_KEY,ANTHROPIC_AUTH_TOKEN,ANTHROPIC_BASE_URL,ANTHROPIC_CUSTOM_HEADERS,ANTHROPIC_LOG,ANTHROPIC_WEBHOOK_SIGNING_KEY,BRIGHTDATA_API_KEY,BRIGHTDATA_SERP_ZONE,EVAL_MODEL,EVAL_JUDGE_MODEL --allow-read=.env,scripts/backtest,base44/entities --allow-write=scripts/backtest/.state,src/evals/published --allow-net=api.anthropic.com,api.brightdata.com scripts/backtest/run.ts",
+    "backtest:dry": "deno run --no-config --import-map scripts/backtest/import_map.json --allow-env=TZ,ANTHROPIC_API_KEY,ANTHROPIC_AUTH_TOKEN,ANTHROPIC_BASE_URL,ANTHROPIC_CUSTOM_HEADERS,ANTHROPIC_LOG,ANTHROPIC_WEBHOOK_SIGNING_KEY,BRIGHTDATA_API_KEY,BRIGHTDATA_SERP_ZONE,EVAL_MODEL,EVAL_JUDGE_MODEL --allow-read=scripts/backtest,base44/entities --allow-write=scripts/backtest/.state scripts/backtest/run.ts --dry-run"
   },
   "dependencies": {
     "@base44/sdk": "^0.8.53",

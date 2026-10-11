@@ -54,7 +54,9 @@ export function buildPublished(x: {
 }): PublishedBacktest {
   const { ev } = x;
   if (ev.stage !== "done" || !ev.summary) throw new Error(`EvalRun ${ev.id} is not finished (stage ${ev.stage})`);
-  const usage: Rec[] = ev.usage || [];
+  // The analyze stage's agents record their usage on the scan's Briefing (stats.agents), not on the
+  // EvalRun (runAgentPipeline keeps its own list), so both are counted.
+  const usage: Rec[] = [...(ev.usage || []), ...(x.briefing?.stats?.agents || [])];
   const cutoff = ev.cutoff || ev.summary.cutoff;
   const kept = x.sources.filter((s) => s.included && s.date && s.date <= cutoff);
   const seen = new Set<string>();
@@ -93,7 +95,9 @@ export function checkPublished(p: Rec, caseKey?: string): string[] {
   if (!p.summary?.news?.quarters?.rows?.length) out.push("no scored quarters");
   if (!p.summary?.no_news) out.push("no no-news condition");
   const cutoff = p.run?.cutoff || p.summary?.cutoff;
-  const late = (p.sources || []).filter((s: Rec) => !s.date || s.date > cutoff);
+  // Without a cutoff, the date check below compares against undefined and passes every dated source.
+  if (!cutoff) out.push("no cutoff date");
+  const late =(p.sources || []).filter((s: Rec) => !s.date || s.date > cutoff);
   if (late.length) out.push(`${late.length} sources undated or after the cutoff`);
   return out;
 }

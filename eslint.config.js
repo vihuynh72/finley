@@ -7,7 +7,7 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   // base44/ (Deno backend functions) and tests/ (Deno tests) are checked with `npm run test:backend`
   // and `npm run test:frontend` instead. Formatting is left to Prettier (.prettierrc), not lint.
-  { ignores: ["dist", "base44", "tests", "src/routeTree.gen.ts"] },
+  { ignores: ["dist", "base44", "tests", "scripts", "src/routeTree.gen.ts"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],

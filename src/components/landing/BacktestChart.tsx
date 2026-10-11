@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
+import { RangeChart, RangeLegend } from "@/components/evals/RangeChart";
+import type { QuarterRow } from "@/components/evals/view";
 import { NETFLIX_2023 } from "../../../base44/shared/eval/cases.ts";
 
 // Netflix's actual 2023 quarterly revenue (USD B), the answer key the backtest scores against.
-// Bars start at zero; Finley's predicted ranges live on the Evals page, not here.
+// Bars start at zero; shown when no published backtest is bundled with the build.
 const QUARTERS = NETFLIX_2023.quarters;
 const MAX = 10;
 const pct = (v: number) => `${(v / MAX) * 100}%`;
@@ -24,6 +26,17 @@ export function BacktestChart() {
           <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground whitespace-nowrap">{q.label}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+// The published backtest's predicted 80% range (with news) against the actual, quarter by quarter.
+// Every number comes from the published snapshot; nothing here is computed for show.
+export function PublishedBacktestChart({ rows }: { rows: QuarterRow[] }) {
+  return (
+    <div>
+      <RangeLegend />
+      <RangeChart rows={rows} label={`${NETFLIX_2023.company} quarterly revenue: Finley's predicted 80% range vs actual, ${rows.map((r) => `${r.q} range ${r.lo ?? "none"} to ${r.hi ?? "none"}, actual ${r.actual}, ${r.hit ? "inside" : "outside"}`).join("; ")}`} />
     </div>
   );
 }
