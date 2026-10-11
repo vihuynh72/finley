@@ -127,8 +127,8 @@ export const WBD_2025: EvalCase = {
     strategic_objectives: "Grow Max internationally and make streaming solidly profitable (management targeted about $1B of streaming adjusted EBITDA in 2025), run the cable networks for cash as they decline, make the studio consistently profitable, cut debt toward its leverage target of 2.5x to 3.0x, and keep the 'strategic flexibility' of the new two-division structure.",
     competitors: ["Netflix", "Disney", "Comcast NBCUniversal", "Paramount Global", "Amazon Prime Video"],
     // FY2023 10-K, the latest full year public at the cutoff (USD millions): revenue $41,321M, costs of revenues
-    // $24,526M (excl. D&A), SG&A $9,696M as opex. EV/EBITDA: about $26B market cap plus about $37B net debt over
-    // about $9.5B trailing adjusted EBITDA. check
+    // $24,526M (excl. D&A), SG&A $9,696M as opex. EV/EBITDA: about $25.9B market cap (2.453B shares at $10.57) plus
+    // $37.2B net debt at Sep 30, 2024, over $8.8B trailing adjusted EBITDA (Q4 2023 to Q3 2024), about 7.2x. check
     annual_revenue: 41321, gross_margin_pct: 40.6, opex: 9696, ev_ebitda_multiple: 7,
     reforecast_due: "2025-01-15",
     assumptions: [
@@ -140,7 +140,7 @@ export const WBD_2025: EvalCase = {
     ],
   },
   known_at_cutoff: [
-    "FY2023 (10-K filed February 2024): revenue $41.3B, adjusted EBITDA $10.4B, operating loss $1.4B after $8.0B of depreciation and amortization, free cash flow $6.2B, 97.7M streaming subscribers at year end.",
+    "FY2023 (10-K filed February 2024): revenue $41.3B, adjusted EBITDA $10.2B, operating loss $1.5B after $8.0B of depreciation and amortization, free cash flow $6.2B, 97.7M streaming subscribers at year end.",
     "2024 quarterly revenue: Q1 $9.96B, Q2 $9.71B, Q3 $9.62B. Q2 included a $9.1B goodwill impairment of the networks business.",
     "Streaming subscribers: 99.6M (Q1 2024), 103.3M (Q2), 110.5M (Q3), helped by Max launches in Latin America (February 2024) and Europe (from May 2024). WBD said in March 2024 it would start limiting password sharing late in 2024 and widen it in 2025.",
     "In July 2024 the NBA turned down TNT's matching offer and gave its games to Amazon, NBC and ESPN from the 2025-26 season. WBD sued, then settled in November 2024 (highlight and international rights; Inside the NBA licensed to ESPN). TNT keeps the NBA through the 2024-25 season.",
@@ -155,7 +155,7 @@ export const WBD_2025: EvalCase = {
   ],
   kpis: [
     { id: "rev_growth", name: "FY2025 revenue growth vs FY2024", unit: "%", base: 0, base_note: "Up means revenue grew", flat_band: 1, actual: -5.1, source: "FY2025 $37,296M (the four 2025 quarters) vs FY2024 $39,321M (Q4 2024 release, sec.gov 8-K 0001437107-25-000028) (snippets)", check: true },
-    { id: "ebitda_margin", name: "FY2025 adjusted EBITDA margin", unit: "%", base: 25.2, base_note: "FY2023 adjusted EBITDA ($10.4B) over revenue ($41.3B), the latest full year at the cutoff; WBD's GAAP operating income is dominated by merger amortization", flat_band: 1, actual: 23.4, source: "Adjusted EBITDA about $2.10B (Q1, backed out of the Q1 2026 release's +5% to $2,203M), $1,953M (Q2), $2.47B (Q3), $2,216M (Q4) = about $8.74B on $37.30B (snippets); replace with the full-year figure in the Q4 2025 release. FY2023 $10.4B from memory (a checker recalled $10.2B, which would make the base 24.6)", check: true },
+    { id: "ebitda_margin", name: "FY2025 adjusted EBITDA margin", unit: "%", base: 24.7, base_note: "FY2023 adjusted EBITDA ($10.2B) over revenue ($41.3B), the latest full year at the cutoff; WBD's GAAP operating income is dominated by merger amortization", flat_band: 1, actual: 23.4, source: "Adjusted EBITDA about $2.10B (Q1, backed out of the Q1 2026 release's +5% to $2,203M), $1,953M (Q2), $2.47B (Q3), $2,216M (Q4) = about $8.74B on $37.30B (snippets); replace with the full-year figure in the Q4 2025 release. Base: FY2023 adjusted EBITDA $10,200M (Q4 2023 release, sec.gov 8-K 0001437107-24-000013; FY2023 annual report; Q4 2024 release table) over revenue $41,321M = 24.7", check: true },
     { id: "streaming_net_adds", name: "Streaming subscriber net adds in 2025", unit: "M", base: 17.1, base_note: "2024 at the Q1-Q3 pace: 97.7M to 110.5M is 12.8M in three quarters, times 4/3; WBD gives no subscriber guidance", flat_band: 1, actual: 14.7, source: `Streaming subscribers 116.9M at December 31, 2024 (Q4 2024 release, sec.gov 8-K 0001437107-25-000028; memory) to 131.6M at December 31, 2025 (${WBD_Q4_2025}; snippet)`, check: true },
     { id: "excess_return", name: "WBD 2025 share price change minus the S&P 500's 2025 price change", unit: "pp", base: 0, base_note: "Up means WBD beat the index", flat_band: 5, actual: 156.3, source: "WBD +172.6% in 2025: the FY2025 10-K performance graph puts $100 invested in April 2022 at $42.66 (Dec 31, 2024) and $116.30 (Dec 31, 2025); from the $10.57 close, about $28.8. S&P 500 5,881.63 to 6,845.50 (+16.4%, AP year-end report)", check: true },
   ],
@@ -168,16 +168,16 @@ export const WBD_2025: EvalCase = {
     { id: "q_subs_every_quarter", text: "Will WBD's streaming subscriber count rise in every quarter of 2025?", outcome: true, resolution: "Q1 +5.3M (122.3M), Q2 +3.4M (125.7M), Q3 +2.3M (128.0M), Q4 +3.5M (131.6M); the reported increments do not sum exactly because of rounding.", source: "2025 quarterly earnings releases (snippets)", check: true },
     { id: "q_rename", text: "Will WBD rename its Max streaming service during 2025?", outcome: true, resolution: "Announced May 14, 2025 at the Upfront; Max became HBO Max again on July 9, 2025.", source: "Newscaststudio and TechCrunch, May 14, 2025 (snippets); relaunch date from memory", check: true },
     { id: "q_price_rise", text: "Will WBD raise the price of at least one US plan of its Max streaming service during 2025?", outcome: true, resolution: "Yes. On October 21, 2025 US prices of HBO Max (Max's name from July) rose: Basic with Ads to $10.99, Standard to $18.49, Premium to $22.99.", source: "October 2025 news coverage (memory)", check: true },
-    { id: "q_uk_launch", text: "Will WBD launch its Max streaming service as a stand-alone service in the UK during 2025?", outcome: false, resolution: "No. HBO content stayed with Sky in the UK through 2025; in February 2025 WBD set the UK launch for 2026.", source: "Q4 2024 results, Feb 27, 2025 (memory)", check: true },
+    { id: "q_uk_launch", text: "Will WBD launch its Max streaming service as a stand-alone service in the UK during 2025?", outcome: false, resolution: "No. HBO content stayed with Sky in the UK through 2025. The 2026 timing was public before the cutoff: on December 9, 2024 Sky and WBD announced a deal extending Sky's agreement until Max launched in the UK and Ireland in early 2026, which WBD repeated with its Q4 2024 results on February 27, 2025. HBO Max launched there on March 26, 2026.", source: "Sky Group and WBD announcement, December 9, 2024; Q4 2024 results, February 27, 2025 (snippets)", check: true },
     { id: "q_dividend", text: "Will WBD start paying a cash dividend during 2025?", outcome: false, resolution: "WBD paid no dividend.", source: "WBD 2025 filings (memory)", check: true },
     { id: "q_ceo", text: "Will David Zaslav stop being WBD's CEO during 2025?", outcome: false, resolution: "Zaslav stayed CEO through 2025 and was named to lead Warner Bros. after the planned split.", source: "WBD announcement, June 9, 2025 (snippets)", check: true },
     { id: "q_beat_index", text: "Will WBD stock outperform the S&P 500 in 2025?", outcome: true, resolution: "WBD about +173% vs S&P 500 about +16%.", source: "Price history (memory)", check: true },
   ],
   actions: [
     { id: "a_venu", date: "2025-01-10", kind: "decision", text: "With Disney and Fox, dropped the planned Venu Sports streaming joint venture, after the three agreed on January 6 to pay Fubo $220M to settle its lawsuit.", source: "Disney and Fubo announcement, Jan 6, 2025 (NBC News snippet); Venu decision date from memory", check: true },
-    { id: "a_intl", date: "2025-02-27", kind: "decision", text: "Said Max would launch in the UK, Ireland, Germany and Italy in 2026 and set a goal of passing 150M streaming subscribers by the end of 2026.", source: "Q4 2024 results, Feb 27, 2025 (sec.gov 8-K 0001437107-25-000028; launch markets from memory); the Q1 2025 shareholder letter (sec.gov 8-K 0001437107-25-000093) repeats the 150M goal (snippet)", check: true },
+    { id: "a_intl", date: "2025-02-27", kind: "decision", text: "Set a goal of passing 150M streaming subscribers by the end of 2026 (from 116.9M at the end of 2024), counting on Max launches in Germany, Italy, the UK and Ireland in 2026; the UK, Ireland and Germany launches had been announced in late 2024.", source: "Q4 2024 results, Feb 27, 2025 (sec.gov 8-K 0001437107-25-000028; launch markets from memory); the Q1 2025 shareholder letter (sec.gov 8-K 0001437107-25-000093) repeats the 150M goal (snippet)", check: true },
     { id: "a_rename", date: "2025-05-14", kind: "decision", text: "Announced at its Upfront that Max would be renamed HBO Max (relaunched July 9, 2025).", source: "Newscaststudio and TechCrunch, May 14, 2025 (snippets)", check: true },
-    { id: "a_debt", date: "2025-06-02", kind: "decision", text: "Arranged a $17.5B bridge loan and launched tender offers for its bonds to reorganize debt ahead of a split; buying bonds below par produced a $3.0B pre-tax gain in Q2.", source: "Q2 2025 earnings release (sec.gov 8-K 0001437107-25-000189) for the $3.0B gain (snippet); bridge size and tender date from memory", check: true },
+    { id: "a_debt", date: "2025-06-09", kind: "decision", text: "Arranged a bridge loan of up to $17.5B ($17.0B drawn June 30) and launched tender offers for its bonds to reorganize debt ahead of a split; buying bonds below par produced a $3.0B pre-tax gain in Q2.", source: "WBD 8-K, June 9, 2025 (sec.gov 0001437107-25-000138) for the bridge commitment and the tender offers; Q2 2025 10-Q (sec.gov 0001437107-25-000192) for the $17.0B draw; Q2 2025 earnings release (sec.gov 8-K 0001437107-25-000189) for the $3.0B gain (snippets)", check: true },
     { id: "a_split", date: "2025-06-09", kind: "decision", text: "Announced a plan to separate into two public companies by mid-2026: Streaming & Studios (Warner Bros. film and TV, DC, HBO, HBO Max), led by David Zaslav, and Global Networks (CNN, TNT Sports US, Discovery, discovery+), led by CFO Gunnar Wiedenfels.", source: "WBD announcement, June 9, 2025 (TheWrap, C21Media snippets)", check: true },
     { id: "a_password", date: "2025-08-07", kind: "decision", text: "Said HBO Max would enforce its password-sharing rules much more aggressively from the fall of 2025, after soft messaging that began in 2024.", source: "Q2 2025 earnings call coverage (snippet without a date; day approximate)", check: true },
     { id: "a_review", date: "2025-10-21", kind: "decision", text: "Opened a review of strategic alternatives after unsolicited interest from several parties, including a sale of the whole company or of Warner Bros., alongside the planned split; it had reportedly rejected Paramount Skydance proposals of about $20 and $24 a share.", source: "WBD announcement, Oct 21, 2025; Reuters (Mediaweek snippet)", check: true },
@@ -235,10 +235,11 @@ export const SPOTIFY_2025_26: EvalCase = {
     strategic_objectives: "Keep growing users toward the 1 billion goal set at its 2022 investor day and keep adding Premium subscribers, raise prices market by market, widen gross margin and operating margin after its first full year of net profit in 2024, reaccelerate advertising growth with programmatic sales and video podcasts, and add higher-priced options for superfans.",
     competitors: ["YouTube Music", "Apple Music", "Amazon Music", "Audible"],
     // FY2024 (Form 20-F; Q4 2024 6-K at SPOT_Q4_2024), the latest full year public at the cutoff: revenue €15,673M
-    // and opex €3,349M (gross profit minus operating income), converted to USD millions at the ECB rate of 1.1720 on
+    // and opex €3,359M (gross profit €4,724M minus operating income €1,365M; R&D €1,486M + S&M €1,392M + G&A €481M),
+    // converted to USD millions at the ECB rate of 1.1720 on
     // June 30, 2025 (EUR-Lex notice C/2025/3118). EV/EBITDA is approximate: EV about €127B over trailing EBITDA
     // about €1.8B. check
-    annual_revenue: 18369, gross_margin_pct: 30.1, opex: 3925, ev_ebitda_multiple: 70,
+    annual_revenue: 18369, gross_margin_pct: 30.1, opex: 3937, ev_ebitda_multiple: 70,
     reforecast_due: "2025-07-15",
     assumptions: [
       { text: "Premium subscribers keep growing about 10% a year", driver: "Premium subscribers", status: "monitoring" },
@@ -249,7 +250,7 @@ export const SPOTIFY_2025_26: EvalCase = {
     ],
   },
   known_at_cutoff: [
-    "FY2024 (results February 4, 2025; Form 20-F): revenue €15.67B (Premium €13.82B, ad-supported €1.86B), gross margin 30.1%, operating income €1.37B (8.7% margin) and net income €1.14B, Spotify's first full year of net profit; 675M monthly active users (MAU) and 263M Premium subscribers at year end.",
+    "FY2024 (results February 4, 2025; Form 20-F): revenue €15.67B (Premium €13.82B, ad-supported €1.85B), gross margin 30.1%, operating income €1.37B (8.7% margin) and net income €1.14B, Spotify's first full year of net profit; 675M monthly active users (MAU) and 263M Premium subscribers at year end.",
     "Q1 2025 (April 29, 2025): revenue €4.19B (+15% year over year), gross margin 31.6%, operating income €509M (below the €548M guidance because of social charges); 678M MAU and 268M Premium subscribers.",
     "Q2 2025 guidance (April 29, 2025): 689M MAU, 273M Premium subscribers, revenue about €4.3B, gross margin 31.5%, operating income €539M.",
     "In late April 2025 the Financial Times reported that Spotify planned to raise Premium prices by about €1 a month across Europe and Latin America, possibly from June, with the US excluded; prices had already risen in the Benelux countries. The US Premium Individual plan was $11.99 after a 2024 increase.",
@@ -319,7 +320,7 @@ export const SPOTIFY_2025_26: EvalCase = {
     "Advertising stayed weak: ad-supported revenue fell in reported euros (down 6% in Q3 2025, 4% in Q4 2025 and 5% in Q1 2026, the last against a prior year recast after some ad-supported activities moved to Premium on January 1, 2026) and was flat to up 4% at constant currency.",
     "Daniel Ek became executive chairman on January 1, 2026, with Gustav Söderström and Alex Norström as co-CEOs.",
     "Spotify began rolling out lossless audio inside Premium at no extra cost in September 2025 (more than 50 markets by the end of October) and agreed in October 2025 to put Spotify Studios and The Ringer video podcasts on Netflix from early 2026.",
-    "Spotify stock fell about 40% over the period (about $767 to about $459, with a low near $428 after the Q1 2026 results on April 28, 2026) while the S&P 500 rose about 21%.",
+    "Spotify stock fell about 40% over the period (about $767 to about $459). Its low came in early February 2026, in a software and AI sell-off before the Q4 2025 results (closes near $413-415, intraday about $405); after the Q1 2026 results on April 28, 2026 it fell again, to about $428. The S&P 500 rose about 21% over the same period.",
     "Free cash flow stayed strong (€797M in Q2 2026, €3.3B over the last twelve months), and the board added $1.0B to the buyback in July 2025.",
   ],
   caveats: [
