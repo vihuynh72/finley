@@ -71,6 +71,10 @@ Deno.test("recommendations: precision, recall, invalid judge ids ignored", () =>
   assert.equal(s.recall_lenient, round3(2 / decisions));
   assert.equal(s.risk_events_flagged, 1);
   assert.equal(s.rows.find((r) => r.id === "R4")!.match, "none");
+  // Each row keeps Finley's advice and names the company action it matched separately.
+  const r1 = s.rows.find((r) => r.id === "R1")!;
+  assert.equal(r1.action, "Charge for password sharing");
+  assert.equal(r1.company_action, c.actions.find((a) => a.id === "a_paid_sharing")!.text);
 });
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
 
