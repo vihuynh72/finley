@@ -1,7 +1,7 @@
 # Published backtests
 
-A file here, `<case_key>.json` (today only `netflix-2023.json`), is a finished backtest frozen for
-presenting. The build bundles it, and the Evals page (`/evals`) and the landing page show it
+A file here, `<case_key>.json` (`netflix-2023.json`, `wbd-2025.json`, `spotify-2025-26.json`; the keys of
+`EVAL_CASES` in `base44/shared/eval/cases.ts`), is a finished backtest frozen for presenting. The build bundles it, and the Evals page (`/evals`) and the landing page show it
 straight away, signed in or not, without calling Base44, Claude or Bright Data. Nothing is re-run
 while someone views it.
 
@@ -14,7 +14,7 @@ undated or dated after the cutoff. The reasons go to the browser console and a n
 
 Only from a real run with real keys. Two ways, same format:
 
-1. **Local runner.** `scripts/backtest/run.ts` runs the backtest stages on your machine with the keys
+1. **Local runner.** `npm run backtest -- --case <case_key>` (`scripts/backtest/run.ts`, needs Deno) runs the backtest stages on your machine with the keys
    in `.env` (`ANTHROPIC_API_KEY`, `BRIGHTDATA_API_KEY`, `BRIGHTDATA_SERP_ZONE`; optional `EVAL_MODEL`,
    `EVAL_JUDGE_MODEL`) and writes the snapshot with `origin: "local-runner"`. Its `--dry-run` fakes
    Claude and Bright Data to test the plumbing; that output says `dry_run: true` and the app will not

@@ -27,7 +27,7 @@ export function Results({ v }: { v: BacktestView }) {
   const q = v.quarters, miss = q.miss;
   return (
     <>
-      <Section title={`A. ${v.company} ${v.horizonLabel.toLowerCase()} quarterly revenue`}>
+      <Section title={`A. ${v.company} quarterly revenue, ${v.horizonLabel}`}>
         <div className="glass p-6">
           <RangeLegend />
           <RangeChart rows={q.rows} currency={v.currency} />

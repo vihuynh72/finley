@@ -101,7 +101,7 @@ function Evals() {
       <div className="max-w-3xl space-y-2 text-sm">
         <p>
           We freeze {c.company} at <b>{dayLabel(c.cutoff)}</b>: Finley builds its keyword plan as of that day, collects only news dated before it, runs the
-          full agent pipeline, then forecasts {c.horizon.label.toLowerCase()} twice, with that news and without it. A judge matches the advice to what {c.company} actually did; every score is computed in code.
+          full agent pipeline, then forecasts the next four quarters ({c.horizon.label}) twice, with that news and without it. A judge matches the advice to what {c.company} actually did; every score is computed in code.
         </p>
         {corpus?.fetched != null && (
           <p className="text-xs text-muted-foreground">
