@@ -15,7 +15,7 @@ export function LandingNav() {
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Link to="/login" className="px-3 py-1.5 hover:text-muted-foreground">Sign in</Link>
-          <Link to="/dashboard" className="hidden sm:inline px-4 py-1.5 rounded-full border border-border bg-card hover:bg-secondary transition">Try the demo</Link>
+          <Link to="/dashboard" search={{ demo: "netflix" } as never} className="hidden sm:inline px-4 py-1.5 rounded-full border border-border bg-card hover:bg-secondary transition">Try the demo</Link>
           <a href="#pilot" className="px-4 py-1.5 rounded-full bg-primary text-primary-foreground font-medium hover:brightness-95 transition">Join the pilot</a>
         </div>
       </div>

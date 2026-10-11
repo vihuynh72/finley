@@ -97,8 +97,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .map((c): ClientSummary => ({ id: c["id"], name: c["name"] || "Unnamed client", evalCase: c["eval_case"] || "" })),
   });
   const clients = useMemo(() => clientsQ.data ?? [], [clientsQ.data]);
-  const [picked, setPicked] = useState(() => stored("finley.client"));
-  const clientId = clients.some((c) => c.id === picked) ? picked : clients.find((c) => !c.evalCase)?.id ?? clients[0]?.id ?? "";
+  const [picked, setPicked] = useState(() => (new URLSearchParams(window.location.search).has("demo") ? "demo" : stored("finley.client")));
+  const demoId = clients.find((c) => c.evalCase?.startsWith("netflix"))?.id;
+  const clientId = picked === "demo" && demoId ? demoId : clients.some((c) => c.id === picked) ? picked : clients.find((c) => !c.evalCase)?.id ?? clients[0]?.id ?? "";
   const clientQ = useQuery({ queryKey: ["client", clientId], enabled: !!clientId, queryFn: () => loadClient(clientId), staleTime: 30_000 });
   const data = clientQ.data;
   const client = data?.client ?? null;
