@@ -95,7 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 className="appearance-none rounded-lg border bg-card py-1.5 pl-3 pr-8 text-sm font-semibold text-foreground">
                 {app.clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
-              <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <ChevronDown size={14} className="pointer-events-none -ml-6 block shrink-0 self-center text-muted-foreground" />
             </span>
           </label>
           <div className="flex items-center gap-4">
