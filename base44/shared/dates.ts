@@ -14,11 +14,18 @@ export function isoDay(raw: string, now: Date): string {
     : text === "yesterday" ? now.getTime() - UNIT_MS.day
     : /^\d{4}-\d{2}-\d{2}$/.test(text) ? Date.parse(`${text}T12:00:00Z`) // a bare ISO day stays that day in any timezone
     : Date.parse(raw);
+  // "Jan 1, 2023" parses as local midnight, which east of UTC is the previous UTC day (and would slip
+  // past a Dec 31 cutoff): keep the calendar day the text names, at 12:00 UTC. A time with its own
+  // zone ("...Z", "+05:30") keeps its instant.
+  if (!rel && text !== "yesterday" && Number.isFinite(ms) && !/^\d{4}-\d{2}-\d{2}$/.test(text) && !/(z|[+-]\d{2}:?\d{2})$/.test(text)) {
+    const d = new Date(ms);
+    ms = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12);
+  }
   // "Oct 3" has no year, and Date.parse reads it as 2001: take the latest such day not after `now`.
   if (!rel && Number.isFinite(ms) && !/\b\d{4}\b/.test(text)) {
     const d = new Date(ms);
-    d.setFullYear(now.getFullYear());
-    if (d.getTime() > now.getTime() + UNIT_MS.day) d.setFullYear(now.getFullYear() - 1);
+    d.setUTCFullYear(now.getUTCFullYear());
+    if (d.getTime() > now.getTime() + UNIT_MS.day) d.setUTCFullYear(now.getUTCFullYear() - 1);
     ms = d.getTime();
   }
   return Number.isFinite(ms) ? new Date(ms).toISOString().slice(0, 10) : "";
