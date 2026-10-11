@@ -56,6 +56,7 @@ function RecCard({ r, evidence, live }: { r: Rec; evidence: boolean; live: boole
   const nav = useNavigate();
   const client = useClient();
   const [draftOpen, setDraftOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(r.draft ?? "");
   const st = app.recStatus[r.id] ?? "open";
   const findings = r.findings.map((id) => client.findings.find((f) => f.id === id)).filter(Boolean) as typeof client.findings;
@@ -69,17 +70,23 @@ function RecCard({ r, evidence, live }: { r: Rec; evidence: boolean; live: boole
       </div>
     );
   }
+  const title = r.headline.replace(/^Before changing the plan, find out:\s*/i, "");
   return (
-    <div className="card space-y-3 p-5">
+    <div className="card p-4">
+      <button className="flex w-full items-center gap-3 text-left" onClick={() => setOpen((o) => !o)}>
+        <span className={cn("shrink-0 rounded px-2 py-0.5 text-[11px] font-medium", typeCls[r.type])}>{r.label ?? r.type}</span>
+        <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">{title}</h3>
+        {evidence && <span className="shrink-0 rounded bg-warning px-2 py-0.5 text-[11px] font-medium text-on-bright">Evidence changed</span>}
+        <span className="num shrink-0 text-[11px] text-muted-foreground">{r.confidence}</span>
+        <ChevronDown size={16} className={cn("shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+      {open && <div className="mt-4 space-y-3 border-t pt-4">
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className={cn("rounded px-2 py-0.5 font-medium", typeCls[r.type])}>{r.label ?? r.type}</span>
-        {evidence && <span className="rounded bg-warning px-2 py-0.5 font-medium text-on-bright">Evidence changed{!live && " · impact removed"}</span>}
         <ScoreChip label="Confidence" v={r.confidence} title="Same scoring as findings: source reliability × corroboration" />
         <span className="rounded border px-2 py-0.5 text-muted-foreground">{r.effort}</span>
         <span className="text-muted-foreground">{r.timing}</span>
       </div>
-      <h3 className="text-base font-semibold leading-snug">{r.headline}</h3>
-      <p className="text-sm"><span className="font-medium">Why: </span>{r.why}</p>
+      <p className="text-sm text-subtle">{r.why}</p>
       <div className="flex flex-wrap gap-2">
         {findings.map((f) => (
           <button key={f.id} onClick={() => app.openDrawer(f)} className={cn("rounded-full border px-2.5 py-0.5 text-xs hover:border-strong", app.findingStatus(f.id) === "dismissed" && "line-through opacity-60")}>
@@ -106,6 +113,7 @@ function RecCard({ r, evidence, live }: { r: Rec; evidence: boolean; live: boole
           <button className="btn" onClick={() => { navigator.clipboard?.writeText(draft); app.notify("Question copied"); }}><Copy size={14} /> Copy</button>
         </div>
       )}
+      </div>}
     </div>
   );
 }
@@ -135,7 +143,7 @@ export function Recommendations() {
         </div>
         <p className="mt-2 text-xs text-muted-foreground">Based on {active.length || s.recs.length} recommendation{(active.length || s.recs.length) > 1 ? "s" : ""} from {s.findingCount} finding{s.findingCount > 1 ? "s" : ""}. Nothing is applied until you accept.</p>
         <RangeBar down={s.down} base={s.recBase} current={s.current} up={s.up} />
-        <p className="num mt-3 border-t pt-2 text-[11px] text-muted-foreground"><span className="font-medium text-foreground">How this is calculated: </span>Recommended base = current {fmtM(s.current)} + base-case changes. Upside = recommended base + upside-only items. Downside = current + downside-only items. Dismissed recommendations and dismissed evidence are excluded.</p>
+        <details className="mt-3 border-t pt-2 text-[11px] text-muted-foreground"><summary className="cursor-pointer font-medium text-foreground">How this is calculated</summary><p className="num mt-1">Recommended base = current {fmtM(s.current)} + base-case changes. Upside = recommended base + upside-only items. Downside = current + downside-only items. Dismissed recommendations and dismissed evidence are excluded.</p></details>
       </div>
 
       <div className="space-y-3">
