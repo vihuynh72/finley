@@ -27,7 +27,8 @@ export default function ClientForm() {
     // Fire-and-forget: the keyword planner maps this profile's external forces into the Bright Data
     // searches every scan runs. Without a plan the pipeline falls back to generic searches.
     base44.functions.invoke("planKeywords", { client_id: c.id }).catch(() => {});
-    navigate(`/clients/${c.id}`);
+    localStorage.setItem("finley_client", c.id);
+    window.location.href = "/app";
   };
 
   return (

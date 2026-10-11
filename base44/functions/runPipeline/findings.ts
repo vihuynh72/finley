@@ -14,6 +14,8 @@ import { UI_TOPICS } from "./research.ts";
 export const isAlert = (m: number, c: number, u: number) => m >= 4 && c >= 3 && u >= 4;
 
 const AGENT_BY_TOPIC: Record<string, string> = { pricing_competition: "competition", demand_customers: "market" }; // the rest: "risk"
+const BASIS_RELIABILITY: Record<string, number> = { company_statement: 95, official_data: 95, confirmed_event: 85,
+  analyst_estimate: 70, forecast: 45, unconfirmed_report: 40, opinion: 25 };
 const WEAK_BASIS = new Set(["forecast", "unconfirmed_report", "opinion"]);
 const PRIMARY_BASIS = new Set(["company_statement", "official_data"]); // a primary source needs no second outlet
 const days = (from: string, to: string) => (Date.parse(to) - Date.parse(from)) / 86_400_000;
@@ -70,7 +72,16 @@ export function buildFindings(x: Inputs) {
     const drivers = [UI_TOPICS[topic], ...assumptions.map((a: any) => a.driver).filter(Boolean)]
       .filter((d, i, all) => all.findIndex((y) => y.toLowerCase() === d.toLowerCase()) === i && (i === 0 || !otherLabels.some((o) => d.toLowerCase().includes(o))));
 
+    // 0-100 display scores, computed in code. Relevance is source reliability: primary sources and
+    // official data rank above trade press, and opinion or headline-only evidence ranks lowest.
+    const reliability = Math.max(...solid.map((d) => BASIS_RELIABILITY[d.fact_basis] ?? 40))
+      + (outlets.size >= 2 ? 5 : 0) - (cited.every((d) => d.headline_only) ? 20 : 0);
+    const rel = Math.min(100, Math.max(0, reliability));
+    const scores = { materiality: materiality * 20, relevance: rel, confidence: confidence * 20, urgency: urgency * 20 };
+    const priorityScore = Math.round(0.35 * scores.materiality + 0.25 * rel + 0.2 * scores.confidence + 0.2 * scores.urgency);
+
     records.push({
+      topic: UI_TOPICS[topic], relevance: rel, scores: { ...scores, priority: priorityScore },
       client_id: x.client.id, run_id: x.run_id, agent: AGENT_BY_TOPIC[topic] || "risk", title: stripIds(f.title),
       fact: solid.map((d) => d.fact).join(" "), interpretation: solid[0].interpretation, why_it_matters: stripIds(f.why_it_matters),
       drivers_affected: drivers, assumptions_affected: assumptions.map((a: any) => a.text), next_step: stripIds(f.next_step),

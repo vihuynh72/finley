@@ -7,16 +7,18 @@ import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
-import AppLayout from '@/components/AppLayout';
-import Portfolio from '@/pages/Portfolio';
 import ClientForm from '@/pages/ClientForm';
-import ClientDashboard from '@/pages/ClientDashboard';
+import Landing from '@/pages/Landing';
+import WorkspaceLayout from '@/components/finley/WorkspaceLayout';
+import Overview from '@/pages/Overview';
+import TopicPage from '@/pages/TopicPage';
+import ScenariosPage from '@/pages/ScenariosPage';
+import SourcesPage from '@/pages/SourcesPage';
+import EvalsPage from '@/pages/EvalsPage';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
-import Screenshot20261010At124448Pm1 from './pages/Screenshot20261010At124448Pm1';
-import Screenshot20261010At124448Pm12 from './pages/Screenshot20261010At124448Pm12';
 // Add page imports here
 
 const AuthenticatedApp = () => {
@@ -49,17 +51,18 @@ const AuthenticatedApp = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<Portfolio />} />
-          <Route path="/clients/new" element={<ClientForm />} />
-          <Route path="/clients/:id" element={<ClientDashboard />} />
-        </Route>
-        <Route path="/Screenshot20261010At124448Pm1" element={<Screenshot20261010At124448Pm1 />} />
-          <Route path="/Screenshot20261010At124448Pm12" element={<Screenshot20261010At124448Pm12 />} />
-        </Route>
-        <Route path="*" element={<PageNotFound />} />
-      </Routes>
+      {/* Login is not enforced for now: pages are open, scans and the scenario agent still need a signed-in user. */}
+      <Route path="/" element={<Landing />} />
+      <Route path="/app" element={<WorkspaceLayout />}>
+        <Route index element={<Overview />} />
+        <Route path="scenarios" element={<ScenariosPage />} />
+        <Route path="sources" element={<SourcesPage />} />
+        <Route path="evals" element={<EvalsPage />} />
+        <Route path=":slug" element={<TopicPage />} />
+      </Route>
+      <Route path="/app/clients/new" element={<div className="max-w-3xl mx-auto p-8"><ClientForm /></div>} />
+      <Route path="*" element={<PageNotFound />} />
+    </Routes>
   );
 };
 
