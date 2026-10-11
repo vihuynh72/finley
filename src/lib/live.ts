@@ -29,11 +29,16 @@ export function shortDate(iso: string, now = new Date()): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }), timeZone: "UTC" });
 }
 
+// Finding.topic_key is the research team's topic (runPipeline/research.ts UI_TOPICS); keyword-plan
+// categories name two of them differently.
+const TOPIC_TO_CATEGORY: Record<string, string> = { regulation: "regulation_policy", logistics_freight: "supply_chain" };
+
 // Which tab a finding belongs on: the exposure whose searches found its sources, else the first tab of
 // the same category, else the first tab.
 export function topicFor(f: Rec, specs: TopicSpec[]): string {
   const byName = specs.find((s) => f["exposure"] && s.name.toLowerCase() === String(f["exposure"]).toLowerCase());
-  const byCategory = specs.find((s) => s.category && s.category === f["topic_key"]);
+  const category = TOPIC_TO_CATEGORY[f["topic_key"]] ?? f["topic_key"];
+  const byCategory = specs.find((s) => s.category && s.category === category);
   return (byName ?? byCategory ?? specs[0])?.id ?? "";
 }
 
@@ -66,6 +71,10 @@ export function toFinding(f: Rec, specs: TopicSpec[], clientName: string): Findi
     nextStep: f["next_step"] || "",
     assumptions: f["assumptions_affected"] || [],
     scores: { materiality: m, confidence: c, urgency: u, priority },
+    // 0-100 display scores the pipeline computed (findings.ts); older findings don't have them.
+    ...(f["scores"]?.priority != null ? { pipelineScores: {
+      priority: Number(f["scores"].priority) || 0, materiality: Number(f["scores"].materiality) || 0, relevance: Number(f["scores"].relevance ?? f["relevance"]) || 0,
+      confidence: Number(f["scores"].confidence) || 0, urgency: Number(f["scores"].urgency) || 0 } } : {}),
     runId: f["run_id"] || "",
   };
 }

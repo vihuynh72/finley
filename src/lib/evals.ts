@@ -27,7 +27,11 @@ export async function runBacktest(opts: { evalRunId?: string; caseKey?: string; 
     try {
       p = (await base44.functions.invoke("runPipeline", { eval: { eval_run_id: id, ...(retry ? { retry: true } : {}) } })).data as Progress;
       retry = false;
-    } catch {
+    } catch (e: any) {
+      // A real answer from the server (expired sign-in, a bug) is shown as is. Only a dropped or
+      // timed-out request means the step may still be running, so wait for its lease.
+      const status = e?.status ?? e?.response?.status;
+      if (status && status !== 408 && status !== 502 && status !== 504) throw new Error(e?.response?.data?.error ?? e?.data?.error ?? e?.message ?? `error ${status}`);
       p = await waitForLease(id);
     }
     opts.onProgress(p);

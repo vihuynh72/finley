@@ -32,7 +32,7 @@ export const hasFinancials = (c: Record<string, any>) => (c.annual_revenue || 0)
 // An agent's impact estimate as model levers: a shock of shock_pct on the exposed share of one P&L line.
 // For a cost shock, the share passed on to customers moves price by that share of the cost change.
 export function leversFor(c: Record<string, any>, p: ImpactParams): Levers {
-  const size = (Number(p.shock_pct) || 0) * clamp(p.exposure_pct, 0, 100) / 100;
+  const size = clamp(p.shock_pct, -95, 95) * clamp(p.exposure_pct, 0, 100) / 100;
   const rev0 = c.annual_revenue || 0, cogs0 = rev0 * (1 - (c.gross_margin_pct || 0) / 100);
   const l = { ...NO_CHANGE };
   if (p.pnl_line === "cogs") {
@@ -44,6 +44,13 @@ export function leversFor(c: Record<string, any>, p: ImpactParams): Levers {
   else if (p.pnl_line === "valuation") l.multiple_change = (c.ev_ebitda_multiple || 0) * size / 100;
   return l;
 }
+
+// Levers written directly by an agent (buildScenario) bypass leversFor, so clamp them here.
+export const clampLevers = (l: Partial<Levers>): Levers => ({
+  price_change_pct: clamp(l.price_change_pct, -95, 95), volume_change_pct: clamp(l.volume_change_pct, -95, 95),
+  cogs_change_pct: clamp(l.cogs_change_pct, -95, 95), opex_change_pct: clamp(l.opex_change_pct, -95, 95),
+  multiple_change: clamp(l.multiple_change, -50, 50),
+});
 
 export const addLevers = (all: Levers[]): Levers =>
   all.reduce((s, l) => ({ price_change_pct: s.price_change_pct + l.price_change_pct, volume_change_pct: s.volume_change_pct + l.volume_change_pct,
@@ -68,7 +75,7 @@ export function findingImpact(c: Record<string, any>, l: Levers, rationale: stri
   const cogs0 = (c.annual_revenue || 0) * (1 - (c.gross_margin_pct || 0) / 100), opex0 = c.opex || 0, v = l.volume_change_pct / 100;
   const cost = cogs0 ? (cogs0 * ((1 + v) * (1 + l.cogs_change_pct / 100) - 1) + opex0 * l.opex_change_pct / 100) / cogs0 * 100 : 0;
   return { revenue_pct: r1(((1 + l.price_change_pct / 100) * (1 + v) - 1) * 100), cost_pct: r1(cost),
-    margin_pts: r1(simulate(c, l).gross_margin_pct - simulate(c, {}).gross_margin_pct), rationale };
+    margin_pts: r1(simulate(c, l).ebitda_margin_pct - simulate(c, {}).ebitda_margin_pct), rationale };
 }
 
 // Materiality 1-5 from the EBITDA effect, against EBITDA (or revenue when EBITDA is thin), plus the

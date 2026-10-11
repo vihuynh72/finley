@@ -11,7 +11,7 @@ const RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
 // supply-chain, macro and technology keywords all go to the market agent.
 const LENS_BY_CATEGORY: Record<string, Lens> = {
   company_specific: "company", pricing_competition: "competitor",
-  regulation_policy: "regulation", geopolitics_trade: "regulation", labor_talent: "regulation",
+  regulation_policy: "regulation", geopolitics_trade: "regulation",
 };
 
 type PlanLike = { exposures?: { name?: string; category: string; sensitivity: string; keywords?: string[] }[] } | null | undefined;

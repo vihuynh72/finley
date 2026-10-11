@@ -4,7 +4,7 @@ Follow `AGENTS.md` too: it holds the Base44 platform conventions (CLI workflow, 
 
 ## What this is
 
-**Finley** (the product formerly called SignalDesk; repo `finley`): an AI strategic-intelligence copilot for FP&A analysts. The analyst's companies are `Client` records. For each client, Finley maps the external forces that move the business (pretraining: the keyword plan), watches the news for them through Bright Data, and has a swarm of Claude agents turn material developments into findings tied to the client's assumptions, with sources, scores and illustrative impact. The dashboard groups everything into **topic tabs, one per exposure in the client's keyword plan**, plus Overview, Prompt scenarios, Sources and Evals.
+**Finley** (the product formerly called SignalDesk; repo `finley`): an AI strategic-intelligence copilot for FP&A analysts. The analyst's companies are `Client` records. For each client, Finley maps the external forces that move the business (pretraining: the keyword plan), watches the news for them through Bright Data, and has a swarm of Claude agents turn material developments into findings tied to the client's assumptions, with sources, scores and illustrative impact. The dashboard groups everything into **topic tabs, one per exposure in the client's keyword plan**, plus Overview, Prompt scenarios, Sources and Evals. `/` is a public landing page with a pilot sign-up form; the workspace can be browsed signed out, and scanning, saving and backtests ask for sign-in.
 
 The hackathon demo is the **backtest (Evals)**: Netflix frozen at 2022-12-31, scored against what it reported and did in 2023.
 
@@ -15,7 +15,7 @@ Stack: **Base44** (entities, auth, Deno backend functions, hosting of the Vite b
 - **Fact vs. interpretation.** Findings keep `fact`/`facts` (observed, grounded in sources) separate from `interpretation`/`why_it_matters`. Every finding carries `sources[]` with outlet, type and tier.
 - **Impacts are illustrative.** Money comes from code (`shared/finance.ts`, `shared/topics.ts`), never from a model's free text, and the UI shows the formula behind every number ("How this is calculated").
 - **Analyst in control.** Finley never edits the client's model. Findings start `review_status: "pending"`; only the analyst moves them.
-- **Low noise.** Alert = materiality ≥ 4 **and** confidence ≥ 3 **and** urgency ≥ 4 (1–5 each); `priority = m × c × u`. Kept in sync: `isAlert` in `base44/functions/runPipeline/findings.ts` and the severity mapping in `src/lib/live.ts` (`is_alert` → urgent, priority ≥ 60 or materiality ≥ 4 → review).
+- **Low noise.** Alert = materiality ≥ 4 **and** confidence ≥ 3 **and** urgency ≥ 4 (1–5 each); `priority = m × c × u`. Kept in sync: `isAlert` in `base44/functions/runPipeline/findings.ts` and the severity mapping in `src/lib/live.ts` (`is_alert` → urgent, priority ≥ 60 or materiality ≥ 4 → review). The pipeline also stores 0–100 display `scores` (priority = 0.35·materiality + 0.25·relevance + 0.2·confidence + 0.2·urgency, relevance = source reliability); the weights are mirrored in `PIPELINE_WEIGHTS` in `src/lib/scores.ts`, which the finding drawer uses to explain the score.
 - **Seek disconfirming evidence** in prompts (the thesis tester exists for this).
 - **No hindsight in backtests.** Anything a backtest agent sees must be dated on or before the cutoff: dated news only, no earlier findings, no saved questions, no market data (Yahoo history is split-adjusted), and `publicCase()` is the only case data a forecaster gets. Outcomes reach only the judges.
 - **Demo data is fictional**, except the Netflix backtest case, whose public figures are cited in `shared/eval/cases.ts` (items marked `check: true` still need confirming against filings).
@@ -25,7 +25,7 @@ Stack: **Base44** (entities, auth, Deno backend functions, hosting of the Vite b
 ```
 base44/
   config.jsonc                    # build: npm run build -> dist/; base44 dev runs npm run dev
-  entities/*.jsonc                # Client, Finding, Run, Briefing, KeywordPlan, Scenario, EvalRun, EvalSource, User
+  entities/*.jsonc                # Client, Finding, Run, Briefing, KeywordPlan, Scenario, EvalRun, EvalSource, PilotSignup, User
   functions/
     planKeywords/                 # pretraining: profile -> KeywordPlan (forces + news keywords)
     runPipeline/                  # live scan ({ run_id }) and backtest steps ({ eval: {...} })
@@ -49,7 +49,8 @@ src/                              # React + TypeScript SPA (TanStack Router, Tai
   lib/store.tsx                   # AppProvider/useApp: react-query loads, persistence, scans
   lib/recs.ts model.ts scores.ts prompt.ts evals.ts data.ts
   routes/                         # index (landing), login, dashboard, topics.$topicId, scenarios, sources, evals, clients.new
-  components/                     # AppShell, FindingList/Drawer, ScenarioBuilder, Recommendations, charts, ui/ (shadcn)
+  components/                     # AppShell, FindingList/Drawer, ScenarioBuilder, Recommendations, AdvicePanel, charts, ui/ (shadcn)
+  components/landing/             # landing sections (framer-motion), PilotForm -> PilotSignup
 tests/backend/                    # Deno tests: topics, scoring, collect
 tests/frontend/                   # Deno tests of src/lib mappers and recommendations
 ```
@@ -62,7 +63,9 @@ Base44 adds `id`, `created_date`, `updated_date`, `created_by`. Financials are *
 - `KeywordPlan`: `exposures[] {name, category, driver, why, sensitivity, keywords[]}` (≤ 20 keywords), `profile_fingerprint`, `as_of` (backtests).
 - `Finding`: scores, `sources[] {title, url, date, outlet, type, tier}`, `facts[]`, `effect`, `exposure` (the plan exposure whose searches found it = its tab), `topic_key`, `event_date`, `impact`, `impact_inputs` (fills the tab's sliders), `review_status`, `feedback` (analyst note).
 - `Run`: `stage`, counts, `error` (also set on partial success), `kind: live|backtest`, `as_of`, `briefing_id`.
-- `Briefing`: everything one run produced (picture, outlook, assumption tests, scenarios, coverage, usage).
+- `Finding` also has `topic` (one of five fixed labels, mapped from `topic_key`), `relevance` and `scores` (0–100: priority, materiality, relevance, confidence, urgency). The UI groups by `exposure`, not `topic`; `live.ts` reads `scores` into `pipelineScores`.
+- `Briefing`: everything one run produced (picture, outlook, assumption tests, scenarios, coverage, usage) and the company lead's `company.advice[]` (decision advice: `action, kind, horizon, confidence, rationale, economics, check_first, sources`), shown on Overview by `AdvicePanel` and fed to the backtest forecaster.
+- `PilotSignup`: landing-page sign-ups (`name`, `email`, `role`, `client_count`, `missed_assumption`); anyone can create, only admins read.
 - `Scenario`: dashboard saves `{name, values: {topicId: {driverId: value}}}`; `buildScenario` writes lever records.
 - `EvalRun` / `EvalSource`: backtest state and the collected news (kept and excluded, with reasons).
 
@@ -75,7 +78,8 @@ Base44 adds `id`, `created_date`, `updated_date`, `created_by`. Financials are *
 - **Live scan:** the UI ensures a keyword plan (`planKeywords`), creates a `Run`, invokes `runPipeline { run_id }` without awaiting, and polls the Run (stops after 7 min). The function refuses backtest clients and a second concurrent scan per client. Searches: client name, up to 3 competitors, then plan keywords (high sensitivity first, ≤ 20).
 - **Backtest:** the Evals page creates an `EvalRun` and calls `runPipeline { eval: { eval_run_id } }` until `done` or `failed` (`{ retry: true }` resumes a failed stage). Stages: `plan` (reset the backtest client to the case profile; keyword plan as of the cutoff) → `collect` (every search × 4 quarterly Google News windows before the cutoff, `limit 10`; rows outside [lookback, cutoff] or undated are excluded; reused across runs by `corpus_key`) → `analyze` (the full agent pipeline with `asOf` = cutoff, `backtest: true`, needs its own invocation) → `forecast` (news vs no-news, same prompt otherwise; optional `EVAL_MODEL` secret) → `score` (condition-blind judges, optional `EVAL_JUDGE_MODEL`; numbers from `shared/eval/scoring.ts`). A lease on the EvalRun stops overlapping steps.
 - **Secrets** (`base44 secrets set`): `ANTHROPIC_API_KEY`, `BRIGHTDATA_API_KEY`, `BRIGHTDATA_SERP_ZONE`; optional `EVAL_MODEL`, `EVAL_JUDGE_MODEL`, `PIPELINE_V1`. Read them inside handlers only.
-- **Platform limits:** 5 minutes per function invocation (pipeline stops at 270 s); no RLS on any entity, so every signed-in user sees every record.
+- **Platform limits:** 5 minutes per function invocation (pipeline stops at 270 s); no RLS on any entity except `PilotSignup`, so every user sees every record.
+- **Signed-out browsing:** `useApp()` loads clients without a user; `needsSignIn` is true only when the client list itself answers 401/403, and then the shell sends you to `/login`. Writes call `app.requireSignIn(why)` first.
 - **Unverified on live services:** Bright Data's handling of Google's `tbs=cdr` date window, and end-to-end timing of each backtest stage. Run one backtest before the demo and check `EvalRun.corpus_stats` and `errors`.
 
 ## Running it
@@ -105,6 +109,7 @@ Base44 adds `id`, `created_date`, `updated_date`, `created_by`. Financials are *
 1. **Security:** no entity RLS and no ownership checks in functions.
 2. **No page extraction:** agents see titles and snippets only (no Web Unlocker).
 3. **No scheduling:** scans run on click; no daily automation (needs a service-role path).
-4. **Briefing not shown:** the new UI shows findings, recommendations and scenarios, not the Briefing's market picture, outlook or coverage.
+4. **Briefing partly shown:** Overview shows the outlook summary and decision advice; the market picture, assumption tests and coverage are not shown.
 5. **Agent pipeline review items for its owner:** a merge can keep an ungrounded development over a grounded duplicate and resolves merge chains one level only (`picture.ts`); the number check in `evidence.ts` rejects facts with "Q3" or bare years; scenario cases in `charts.ts` can put Downside above Central and capitalise transitory shocks; valuation candidates get materiality band 1 (`impacts.ts`); `buildScenario` ignores a backtest client's cutoff.
 6. **Backtest answer key:** several Netflix figures are snippet-sourced (`check: true`); confirm against the 10-K and shareholder letters.
+7. **Unverified on the live app:** that a signed-out visitor can create a `PilotSignup` (`create: {}`) and read clients (push the entities first).

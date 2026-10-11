@@ -16,6 +16,17 @@
         "risk"
       ]
     },
+    "topic": {
+      "type": "string",
+      "enum": [
+        "Input costs",
+        "Pricing and competition",
+        "Demand and customers",
+        "Logistics and freight",
+        "Regulation"
+      ],
+      "description": "Dashboard topic"
+    },
     "title": {
       "type": "string"
     },
@@ -59,6 +70,31 @@
     },
     "priority": {
       "type": "number"
+    },
+    "relevance": {
+      "type": "number",
+      "description": "Source reliability, 0-100"
+    },
+    "scores": {
+      "type": "object",
+      "description": "0-100 display scores",
+      "properties": {
+        "priority": {
+          "type": "number"
+        },
+        "materiality": {
+          "type": "number"
+        },
+        "relevance": {
+          "type": "number"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "urgency": {
+          "type": "number"
+        }
+      }
     },
     "is_alert": {
       "type": "boolean"

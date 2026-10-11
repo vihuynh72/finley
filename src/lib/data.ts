@@ -25,6 +25,7 @@ export interface Finding {
   scenario?: Values;
   nextStep: string; assumptions: string[];
   scores: { materiality: number; confidence: number; urgency: number; priority: number }; // the pipeline's 1-5 scores
+  pipelineScores?: { priority: number; materiality: number; relevance: number; confidence: number; urgency: number }; // 0-100, when the pipeline computed them
   runId: string;
 }
 export interface Client {

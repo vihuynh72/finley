@@ -27,11 +27,18 @@ export default async function (req) {
     const client = await base44.entities.Client.get(run.client_id);
     // A backtest client is frozen at its cutoff; a live scan would mix today's news into it.
     if (client.eval_case) throw new Error("This is a backtest client. Run it from the Evals page.");
-    // One scan per client at a time: a second one would save the same findings and send the same alerts.
-    const others = await base44.entities.Run.filter({ client_id: client.id }, { sort: "-created_date", limit: 5 }).catch(() => null);
-    const busy = (others?.items || []).find((r) => r.id !== run_id && !["done", "failed"].includes(r.stage) && Date.now() - Date.parse(r.created_date) < 6 * 60_000);
-    if (busy) throw new Error("Another scan for this client is still running. Wait for it to finish.");
     const profile = profileText(client);
+
+    // One run per client at a time: a second run would double-count findings, fight over assumption
+    // statuses and send the same alerts. Best-effort check; runs older than 6 minutes count as dead.
+    // The refused run is closed as failed, so it doesn't itself block the next scan.
+    const siblings = await base44.entities.Run.filter({ client_id: client.id }, { sort: "-created_date", limit: 5 }).catch(() => null);
+    const inFlight = (siblings?.items || []).find((r) => r.id !== run_id && !["done", "failed"].includes(r.stage)
+      && Date.now() - Date.parse(r.created_date || "") < 6 * 60_000);
+    if (inFlight) {
+      await base44.entities.Run.update(run_id, { stage: "failed", error: "Another scan for this client is still running" }).catch(() => {});
+      return Response.json({ error: `Run ${inFlight.id} is already in progress for this client` }, { status: 409 });
+    }
 
     // 1. Collection via Bright Data
     await base44.entities.Run.update(run_id, { stage: "collecting" });

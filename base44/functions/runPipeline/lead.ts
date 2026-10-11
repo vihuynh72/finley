@@ -12,11 +12,16 @@ import { UI_TOPICS } from "./research.ts";
 // Code then checks every id and score (findings.ts) before anything is saved.
 
 export interface LeadFinding {
-  title: string; development_ids: string[]; counter_ids: string[]; candidate_id: string; topic: string; novelty: string; prior_title: string;
+  title: string; development_ids: string[]; candidate_id: string; topic: string; novelty: string; prior_title: string;
   why_it_matters: string; counter_summary: string; key_unknown: string; next_step: string; materiality: number; confidence: number; urgency: number;
+}
+export interface LeadAdvice {
+  action: string; kind: string; development_ids: string[]; candidate_id: string;
+  rationale: string; check_first: string; confidence: number; horizon: string;
 }
 export interface LeadOutput {
   findings: LeadFinding[];
+  advice: LeadAdvice[];
   outlook: { verdict: string; summary: string; conditions: { if_condition: string; then_effect: string; signpost: string }[] };
   watchlist: { indicator: string; threshold: string; why: string }[];
 }
@@ -24,7 +29,7 @@ export interface LeadOutput {
 const LEAD_SCHEMA = obj({
   findings: list(obj({
     title: str("At most 12 words: what happened and why it matters to the client"),
-    development_ids: list(str(), "The developments it rests on"), counter_ids: list(str(), "Developments that cut against it"),
+    development_ids: list(str(), "The developments it rests on"),
     candidate_id: str("The impact candidate that quantifies it, e.g. C2, or '' if none"),
     topic: choice(Object.keys(UI_TOPICS)), novelty: choice(["new", "escalation", "repeat"]),
     prior_title: str("Title of the earlier finding it repeats or escalates, or ''"),
@@ -34,6 +39,17 @@ const LEAD_SCHEMA = obj({
     next_step: str("A check the analyst can finish within a day, then the signpost to watch"),
     materiality: score("Materiality, per the rubric"), confidence: score("Confidence, per the rubric"), urgency: score("Urgency, per the rubric"),
   }), "0 to 8 findings that matter for this client, most important first. Zero is a valid answer."),
+  advice: list(obj({
+    action: str("At most 15 words, phrased as an option to weigh: 'Evaluate exiting the low-margin retail segment', 'Prepare a hedge for DRAM costs'"),
+    kind: choice(["opportunity", "risk_response", "exit_or_reduce", "investigate", "monitor"],
+      "opportunity: pursue a demand pocket, segment or cost opening. risk_response: prepare or hedge against an adverse move. exit_or_reduce: standing still looks clearly costly. investigate: worth a check before any decision. monitor: not actionable yet"),
+    development_ids: list(str(), "The developments the advice rests on"),
+    candidate_id: str("The impact candidate carrying the economics, e.g. C2, or '' if none"),
+    rationale: str("1 to 2 sentences: the evidence and why it is worth weighing now. No money figures; those come from the candidate."),
+    check_first: str("The check or signpost that would confirm or kill this advice before the analyst acts on it"),
+    confidence: score("How worth raising this is: evidence strength plus economic size, same honesty as the rubric"),
+    horizon: choice(["now", "this_quarter", "next_12_months"], "When inaction starts costing"),
+  }), "0 to 4 decision-level suggestions for the analyst's client conversation. Only what the evidence supports; empty is a valid answer."),
   outlook: obj({
     verdict: choice(["positive", "negative", "mixed", "neutral"], "If today's developments persist, is the company better or worse off?"),
     summary: str("2 to 3 sentences: will the company do well if these developments continue, and why?"),
@@ -49,6 +65,8 @@ Rules:
 - Actively look for evidence that CHALLENGES the client's thesis and objectives, and say when new evidence contradicts a finding the analyst validated.
 - Compare with the earlier findings: label repeats and escalations. Don't re-raise a finding the analyst rejected unless the facts changed, and if they did, say what changed.
 - Never invent numbers: money figures come only from the computed candidates. A development with source_check="failed" did not match its source, so it can't carry a finding alone.
+- Give the analyst decision advice, not just findings: opportunities worth pursuing, positions worth reducing or exiting, risks worth preparing for. Phrase every item as an option to evaluate, never a directive - the analyst and their client decide.
+- Match conviction to evidence: "exit_or_reduce" only when the economics or corroborated evidence make standing still clearly costly; otherwise "investigate" or "monitor". If you can't name what would prove the advice wrong, don't give it.
 - Plain English for a finance reader. Never put ids in prose fields.`;
 
 const RUBRIC = `Scoring, integers 1-5, checked by code afterwards:
@@ -58,19 +76,21 @@ const RUBRIC = `Scoring, integers 1-5, checked by code afterwards:
 - Urgent alerts go out at materiality 4+, confidence 3+ and urgency 4+, so keep those scores for what truly needs attention now.`;
 
 export interface LeadInput {
-  client: Record<string, any>; today: string; market: { snapshot: any; note: string }; developments: CheckedDevelopment[];
+  client: Record<string, any>; today: string; market: { snapshot: any; note: string }; developments: CheckedDevelopment[]; mergedInto: Record<string, string>;
   picture: { headline: string; overview: string; conflicts: { question: string; assessment: string }[] } | null;
   thesis: { ledger: any[]; profile_checks: any[] }; candidates: Quantified[]; prior: Record<string, any>[];
 }
 
 export function runCompanyLead(input: LeadInput, opts: { deadline: number; usage: AgentUsage[]; effort: Effort }) {
   const { client, picture, thesis } = input;
-  const ledger = (thesis.ledger || []).map((l: any) => `[${l.assumption_index}] ${client.assumptions?.[l.assumption_index]?.text ?? "?"}: against ${(l.challenging_ids || []).join(",") || "none"}; for ${(l.supporting_ids || []).join(",") || "none"}. Counterpoint: ${l.strongest_counterpoint || "none"}`).join("\n");
-  const checks = (thesis.profile_checks || []).map((p: any) => `${p.profile_area} (${p.relation}): ${p.finding} [${(p.development_ids || []).join(",")}]`).join("\n");
+  // The thesis tester saw the developments before the research lead merged them: point its ids at the survivors.
+  const refs = (list: string[]) => [...new Set((list || []).map((id) => String(id).trim().toUpperCase()).map((id) => input.mergedInto[id] || id))].join(",");
+  const ledger = (thesis.ledger || []).map((l: any) => `[${l.assumption_index}] ${client.assumptions?.[l.assumption_index]?.text ?? "?"}: against ${refs(l.challenging_ids) || "none"}; for ${refs(l.supporting_ids) || "none"}. Counterpoint: ${l.strongest_counterpoint || "none"}`).join("\n");
+  const checks = (thesis.profile_checks || []).map((p: any) => `${p.profile_area} (${p.relation}): ${p.finding} [${refs(p.development_ids)}]`).join("\n");
   const prior = input.prior.map((f) => `- ${String(f.created_date || "").slice(0, 10)} "${f.title}" (${f.review_status}${f.feedback ? `; analyst: ${f.feedback}` : ""}${f.incorporate ? "; included in advice" : ""})`).join("\n");
   const market = picture ? `${picture.headline}\n${picture.overview}${picture.conflicts.map((c) => `\nSources disagree: ${c.question} ${c.assessment}`).join("")}` : "Not available this scan.";
   return runAgent<LeadOutput>({
     name: "company/lead", system: RULES, schema: LEAD_SCHEMA, deadline: opts.deadline, effort: opts.effort,
-    prompt: `Today is ${input.today}.\n\n<client_profile>\n${profileText(client)}\n</client_profile>\n\n<market_data>\n${snapshotText(input.market)}\n</market_data>\n\n<market_picture>\n${market}\n</market_picture>\n\n<developments>\n${renderDevelopments(input.developments)}\n</developments>\n\n<assumption_tests>\n${ledger || "none"}\n</assumption_tests>\n\n<profile_checks>\n${checks || "none"}\n</profile_checks>\n\n<impact_candidates>\n${renderCandidates(input.candidates)}\n</impact_candidates>\n\n<earlier_findings>\n${prior || "none in the last 30 days"}\n</earlier_findings>\n\n<rubric>\n${materialityRubric(client)}\n${RUBRIC}\n</rubric>\n\nWrite the findings, the outlook and the watchlist.`,
+    prompt: `Today is ${input.today}.\n\n<client_profile>\n${profileText(client)}\n</client_profile>\n\n<market_data>\n${snapshotText(input.market)}\n</market_data>\n\n<market_picture>\n${market}\n</market_picture>\n\n<developments>\n${renderDevelopments(input.developments)}\n</developments>\n\n<assumption_tests>\n${ledger || "none"}\n</assumption_tests>\n\n<profile_checks>\n${checks || "none"}\n</profile_checks>\n\n<impact_candidates>\n${renderCandidates(input.candidates)}\n</impact_candidates>\n\n<earlier_findings>\n${prior || "none in the last 30 days"}\n</earlier_findings>\n\n<rubric>\n${materialityRubric(client)}\n${RUBRIC}\n</rubric>\n\nWrite the findings, the advice, the outlook and the watchlist.`,
   }, opts.usage);
 }

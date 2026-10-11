@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type Context, type ReactNode } from "react";
 import { base44 } from "@/api/base44Client";
 import type { Client, Finding, Status, TopicId, Values } from "./data";
@@ -18,6 +19,9 @@ const SCAN_TIMEOUT_MS = 7 * 60_000; // runPipeline stops itself inside Base44's 
 
 interface Ctx {
   user: Record<string, any> | null; authChecked: boolean;
+  // Pages are readable without signing in (as on main); anything that writes or spends tokens asks first.
+  needsSignIn: boolean; requireSignIn: (why: string) => boolean;
+  briefing: Record<string, any> | null; // the latest scan's Briefing: market picture, outlook, decision advice
   clients: ClientSummary[]; clientsLoading: boolean;
   client: Client | null; clientLoading: boolean; loadError: string;
   clientId: string; setClientId: (id: string) => void;
@@ -52,12 +56,13 @@ const items = (page: any): Record<string, any>[] => (Array.isArray(page) ? page 
 
 async function loadClient(id: string) {
   const E = base44.entities;
-  const [rec, plans, findings, scenarios, runs] = await Promise.all([
+  const [rec, plans, findings, scenarios, runs, briefings] = await Promise.all([
     E.Client.get(id),
     E.KeywordPlan.filter({ client_id: id }, { sort: "-created_date", limit: 1 }),
     E.Finding.filter({ client_id: id }, { sort: "-created_date", limit: 150 }),
     E.Scenario.filter({ client_id: id }, { sort: "-created_date", limit: 50 }),
     E.Run.filter({ client_id: id }, { sort: "-created_date", limit: 1 }),
+    E.Briefing.filter({ client_id: id }, { sort: "-created_date", limit: 1 }).catch(() => null),
   ]);
   const fs = items(findings);
   return {
@@ -69,6 +74,7 @@ async function loadClient(id: string) {
     overrides: (rec["source_overrides"] || {}) as Overrides,
     recStatus: (rec["rec_decisions"] || {}) as Record<string, RecStatus>,
     latestRun: items(runs)[0] ?? null,
+    briefing: items(briefings)[0] ?? null,
   };
 }
 
@@ -76,8 +82,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   const me = useQuery({ queryKey: ["me"], queryFn: () => base44.auth.me(), retry: false, staleTime: 5 * 60_000 });
   const user = me.data ?? null;
+  const navigate = useNavigate();
   const clientsQ = useQuery({
-    queryKey: ["clients"], enabled: !!user, staleTime: 60_000,
+    queryKey: ["clients"], enabled: !me.isLoading, staleTime: 60_000, retry: false,
     queryFn: async () => items(await base44.entities.Client.list("-created_date", 200))
       .map((c): ClientSummary => ({ id: c["id"], name: c["name"] || "Unnamed client", evalCase: c["eval_case"] || "" })),
   });
@@ -150,16 +157,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     const overrides = overridesAll[cid] ?? data?.overrides ?? {};
     const recStatus = recs[cid] ?? data?.recStatus ?? {};
+    // Signed-out visitors can browse and try every control, but nothing they do is written to the
+    // shared records; the toast says so.
+    const unsaved = user ? "" : " · not saved, sign in to keep it";
     const saveRecs = (next: Record<string, RecStatus>) => {
       setRecs((x) => ({ ...x, [cid]: next }));
-      base44.entities.Client.update(cid, { rec_decisions: next }).catch((e) => notify(`Couldn't save the decision: ${e.message}`));
+      if (user) base44.entities.Client.update(cid, { rec_decisions: next }).catch((e) => notify(`Couldn't save the decision: ${e.message}`));
     };
     const saveStatus = (ids: string[], s: FindingStatus) => {
       setFs((x) => ({ ...x, ...Object.fromEntries(ids.map((id) => [id, s])) }));
-      for (const id of ids) base44.entities.Finding.update(id, { review_status: dbStatus(s) }).catch((e) => notify(`Couldn't save the status: ${e.message}`));
+      if (user) for (const id of ids) base44.entities.Finding.update(id, { review_status: dbStatus(s) }).catch((e) => notify(`Couldn't save the status: ${e.message}`));
     };
     return {
       user, authChecked: !me.isLoading,
+      needsSignIn: !user && [401, 403].includes(Number((clientsQ.error as any)?.status ?? (clientsQ.error as any)?.response?.status)),
+      requireSignIn: (why) => {
+        if (user) return true;
+        notify(`Sign in to ${why}`);
+        void navigate({ to: "/login" });
+        return false;
+      },
+      briefing: data?.briefing ?? null,
       clients, clientsLoading: clientsQ.isLoading, client, clientLoading: clientQ.isLoading,
       loadError: String((clientsQ.error as Error)?.message || (clientQ.error as Error)?.message || ""),
       clientId: cid, setClientId: (id) => { setPicked(id); store("finley.client", id); setDrawer(null); },
@@ -182,13 +200,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       findingStatus,
       setFindingStatus: (id, s) => {
         saveStatus([id], s);
-        notify(s === "review" ? "Added to forecast review" : s === "research" ? "Marked as needs research" : s === "dismissed" ? "Dismissed as not material" : "Reopened");
+        notify((s === "review" ? "Added to forecast review" : s === "research" ? "Marked as needs research" : s === "dismissed" ? "Dismissed as not material" : "Reopened") + unsaved);
       },
       notes: { ...(data?.notes ?? {}), ...notes },
       setNote: (id, n) => {
         setNotes((x) => ({ ...x, [id]: n }));
         clearTimeout(noteTimers.current[id]);
         noteTimers.current[id] = setTimeout(() => {
+          if (!user) { notify("Notes are not saved until you sign in"); return; }
           base44.entities.Finding.update(id, { feedback: n }).catch((e) => notify(`Couldn't save the note: ${e.message}`));
         }, 700);
       },
@@ -203,6 +222,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saved: data?.saved ?? [],
       saveScenario: (name, v) => {
         if (!client) return;
+        if (!user) { notify("Sign in to save scenarios"); return; }
         const values = structuredClone(v ?? clientVals(client));
         base44.entities.Scenario.create({ client_id: cid, question: name, name, values })
           .then(() => { notify(`Saved “${name}”`); return qc.invalidateQueries({ queryKey: ["client", cid] }); })
@@ -211,6 +231,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       lastScan: scanLabel(client?.lastScanAt ?? ""), scanning, scanStage,
       scan: () => {
         if (!client || scanning) return;
+        if (!user) { notify("Sign in to run a scan"); void navigate({ to: "/login" }); return; }
         setScanning(true); setScanStage("Starting");
         void (async () => {
           try {
@@ -239,7 +260,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setRecStatus: (id, s, reviewIds) => {
         saveRecs({ ...recStatus, [id]: s });
         if (reviewIds?.length) saveStatus(reviewIds, "review");
-        notify(s === "accepted" ? (reviewIds?.length ? "Accepted · added to forecast review" : "Recommendation accepted") : s === "snoozed" ? "Snoozed" : s === "dismissed" ? "Recommendation dismissed" : "Decision undone");
+        notify((s === "accepted" ? (reviewIds?.length ? "Accepted · added to forecast review" : "Recommendation accepted") : s === "snoozed" ? "Snoozed" : s === "dismissed" ? "Recommendation dismissed" : "Decision undone") + unsaved);
       },
       overrides,
       setOverride: (name, tier, reason) => {
@@ -247,11 +268,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (tier === null) delete n[name];
         else n[name] = { tier, reason, at: new Date().toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) };
         setOverridesAll((x) => ({ ...x, [cid]: n }));
-        base44.entities.Client.update(cid, { source_overrides: n }).catch((e) => notify(`Couldn't save the tier: ${e.message}`));
-        notify(tier === null ? `Reset tier for ${name}` : `${name} set to Tier ${tier}`);
+        if (user) base44.entities.Client.update(cid, { source_overrides: n }).catch((e) => notify(`Couldn't save the tier: ${e.message}`));
+        notify((tier === null ? `Reset tier for ${name}` : `${name} set to Tier ${tier}`) + unsaved);
       },
     };
-  }, [clientId, client, data, user, me.isLoading, clients, clientsQ.isLoading, clientsQ.error, clientQ.isLoading, clientQ.error, vals, presets, tagsAll, fs, notes, recs, overridesAll, scanning, scanStage, toast, drawer, notify, refresh, follow, qc]);
+  }, [clientId, client, data, user, me.isLoading, navigate, clients, clientsQ.isLoading, clientsQ.error, clientQ.isLoading, clientQ.error, vals, presets, tagsAll, fs, notes, recs, overridesAll, scanning, scanStage, toast, drawer, notify, refresh, follow, qc]);
 
   return <C.Provider value={value}>{children}</C.Provider>;
 }

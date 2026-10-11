@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { X } from "lucide-react";
 import { fmtM, topicName, type Finding } from "@/lib/data";
-import { scoreFinding } from "@/lib/scores";
+import { PIPELINE_WEIGHTS, scoreFinding } from "@/lib/scores";
 import { ScoreChip } from "./ScoreChips";
 import { useApp } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -70,18 +70,33 @@ export function FindingDrawer() {
             <table className="num w-full text-xs">
               <thead><tr className="text-left text-muted-foreground"><th className="pb-1 font-medium">Component</th><th className="pb-1 font-medium">Weight</th><th className="pb-1 font-medium">Value</th><th className="pb-1 text-right font-medium">Points</th></tr></thead>
               <tbody>
-                {([["Materiality", 0.5, sc.materiality], ["Confidence", 0.3, sc.confidence], ["Urgency", 0.2, sc.urgency]] as const).map(([n, w, v]) => (
-                  <tr key={n} className="border-t"><td className="py-1">{n}</td><td>{w * 100}%</td><td>{v}</td><td className="text-right">{(w * v).toFixed(1)}</td></tr>
+                {(sc.basis === "pipeline"
+                  ? [["Materiality", PIPELINE_WEIGHTS.materiality, sc.materiality], ["Source reliability", PIPELINE_WEIGHTS.relevance, sc.reliability], ["Confidence", PIPELINE_WEIGHTS.confidence, sc.confidence], ["Urgency", PIPELINE_WEIGHTS.urgency, sc.urgency]]
+                  : [["Materiality", 0.5, sc.materiality], ["Confidence", 0.3, sc.confidence], ["Urgency", 0.2, sc.urgency]]
+                ).map(([n, w, v]) => (
+                  <tr key={n as string} className="border-t"><td className="py-1">{n}</td><td>{Math.round((w as number) * 100)}%</td><td>{v}</td><td className="text-right">{((w as number) * (v as number)).toFixed(1)}</td></tr>
                 ))}
               </tbody>
             </table>
-            <ul className="num mt-3 space-y-1.5 border-t pt-2 text-[11px] leading-relaxed text-muted-foreground">
-              <li><b className="text-foreground">Materiality {sc.materiality}:</b> {fmtM(sc.impact)} ({sc.impactBasis}) ÷ {fmtM(sc.baseEbitda)} base EBITDA = {sc.impactPct.toFixed(1)}% → ×10, capped at 100.</li>
-              <li><b className="text-foreground">Source reliability {sc.reliability}:</b> average of {sc.sourceScores.map((s) => `${s.name} (Tier ${s.tier}, ${s.score})`).join(", ")}.</li>
-              <li><b className="text-foreground">Confidence {sc.confidence}:</b> {sc.reliability} × {sc.corroboration} ({sc.corrobLabel}).</li>
-              <li><b className="text-foreground">Urgency {sc.urgency}:</b> takes effect in about {sc.days} days (estimated from severity) → 100 within 90 days, 50 within a year, 20 beyond.</li>
-              <li><b className="text-foreground">Priority {sc.priority}</b> = 0.5 × {sc.materiality} + 0.3 × {sc.confidence} + 0.2 × {sc.urgency}.</li>
-            </ul>
+            {sc.basis === "pipeline" ? (
+              <ul className="num mt-3 space-y-1.5 border-t pt-2 text-[11px] leading-relaxed text-muted-foreground">
+                <li><b className="text-foreground">Materiality {sc.materiality}:</b> the scan's 1–5 materiality × 20, kept within one step of the computed EBITDA effect.</li>
+                <li><b className="text-foreground">Source reliability {sc.reliability}:</b> {sc.overridden
+                  ? <>your tier overrides: average of {sc.sourceScores.map((s) => `${s.name} (Tier ${s.tier}, ${s.score})`).join(", ")}.</>
+                  : <>from the strongest evidence behind it (company statement or official data 95, confirmed event 85, analyst estimate 70, forecast 45, unconfirmed report 40, opinion 25), +5 with two or more outlets, −20 when only headlines were seen.</>}</li>
+                <li><b className="text-foreground">Confidence {sc.confidence}:</b> the scan's 1–5 confidence × 20, capped by the evidence (one outlet, headline only, weak basis).</li>
+                <li><b className="text-foreground">Urgency {sc.urgency}:</b> the scan's 1–5 urgency × 20; at most 3 when the newest evidence is over 21 days old.</li>
+                <li><b className="text-foreground">Priority {sc.priority}</b> = 0.35 × {sc.materiality} + 0.25 × {sc.reliability} + 0.2 × {sc.confidence} + 0.2 × {sc.urgency}.</li>
+              </ul>
+            ) : (
+              <ul className="num mt-3 space-y-1.5 border-t pt-2 text-[11px] leading-relaxed text-muted-foreground">
+                <li><b className="text-foreground">Materiality {sc.materiality}:</b> {fmtM(sc.impact)} ({sc.impactBasis}) ÷ {fmtM(sc.baseEbitda)} base EBITDA = {sc.impactPct.toFixed(1)}% → ×10, capped at 100.</li>
+                <li><b className="text-foreground">Source reliability {sc.reliability}:</b> average of {sc.sourceScores.map((s) => `${s.name} (Tier ${s.tier}, ${s.score})`).join(", ")}.</li>
+                <li><b className="text-foreground">Confidence {sc.confidence}:</b> {sc.reliability} × {sc.corroboration} ({sc.corrobLabel}).</li>
+                <li><b className="text-foreground">Urgency {sc.urgency}:</b> takes effect in about {sc.days} days (estimated from severity) → 100 within 90 days, 50 within a year, 20 beyond.</li>
+                <li><b className="text-foreground">Priority {sc.priority}</b> = 0.5 × {sc.materiality} + 0.3 × {sc.confidence} + 0.2 × {sc.urgency}.</li>
+              </ul>
+            )}
           </div>
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">What would change this view</p>

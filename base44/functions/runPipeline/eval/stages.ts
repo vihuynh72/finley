@@ -88,7 +88,11 @@ async function collect(x: Ctx): Promise<Rec> {
   });
   const failed: string[] = [...(ev.corpus_stats?.failed_pairs_all || []), ...res.failed];
   if (res.remaining.length) return { collected_pairs: [...done], corpus_stats: { ...(ev.corpus_stats || {}), failed_pairs_all: failed, collected: done.size, total: all.length } };
-  if (failed.length > all.length / 2) throw new Error(`Bright Data failed on ${failed.length} of ${all.length} searches; first error: ${failed[0]}`);
+  if (failed.length > all.length / 2) {
+    // Saved before failing: a retry re-fetches exactly these pairs (they are already marked collected).
+    await E.EvalRun.update(ev.id, { corpus_stats: { ...(ev.corpus_stats || {}), failed_pairs_all: failed, collected: done.size, total: all.length } });
+    throw new Error(`Bright Data failed on ${failed.length} of ${all.length} searches; first error: ${failed[0]}`);
+  }
   const stats = { ...corpusStats((await allRows(E.EvalSource, { corpus_key: ev.corpus_key })) as SourceRow[], searches, windows, failed), failed_pairs_all: failed, collected: all.length, total: all.length };
   if (!stats.kept) throw new Error(`No dated news before ${c.cutoff} was found (${stats.fetched} results fetched)`);
   return { stage: "analyze", corpus_complete: true, collected_pairs: [...done], corpus_stats: stats };
@@ -105,6 +109,7 @@ async function analyze(x: Ctx): Promise<Rec> {
   const run = await E.Run.create({ client_id: client.id, stage: "research", kind: "backtest", as_of: new Date(asOf).toISOString(), eval_run_id: ev.id, articles_count: articles.length });
   try {
     const out = await runAgentPipeline({ base44: x.base44, user: x.user, run_id: run.id, client, searches, results, articles, startedAt: x.startedAt, asOf, backtest: true });
+    if (!out.ok) throw new Error(`The company lead failed, so the backtest scan has no findings: ${out.errors.find((e: string) => e.startsWith("company lead")) ?? "no detail"}`);
     return { stage: "forecast", run_id: run.id, briefing_id: out.briefing_id, errors: [...(ev.errors || []), ...out.errors.map((e: string) => `analyze: ${e}`)].slice(-20) };
   } catch (e) {
     await E.Run.update(run.id, { stage: "failed", error: (e as Error).message }).catch(() => {});
@@ -216,7 +221,7 @@ export async function runEvalStep(base44: any, user: any, req: Rec, startedAt: n
       const patch = await STAGES[stage]({ base44, user, ev, c, startedAt, usage, req });
       ev = { ...ev, ...patch, usage: [...(ev.usage || []), ...usage.splice(0)].slice(-80) };
       await E.EvalRun.update(ev.id, { ...patch, usage: ev.usage });
-      if (stage === "analyze") break;
+      if (stage === "analyze" || !patch.stage || patch.stage === stage) break; // analysis used the time; collect ran out of it
     }
   } catch (e) {
     const msg = (e as Error).message || String(e);

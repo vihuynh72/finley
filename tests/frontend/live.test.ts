@@ -67,3 +67,25 @@ Deno.test("date labels", () => {
   assert.equal(scanLabel("", now), "never");
   assert.match(scanLabel("2026-10-10T09:40:00Z", now), /^today, /);
 });
+
+Deno.test("a regulation finding found only by company searches still lands on the regulation tab", async () => {
+  const plan2 = { exposures: [...plan.exposures, { name: "Streaming content rules", category: "regulation_policy", driver: "", why: "Local content quotas", sensitivity: "low", keywords: ["EU streaming quota"] }] };
+  const c = toClient(client, plan2, [{ ...finding, id: "f3", exposure: "", topic_key: "regulation" }]);
+  assert.equal(c.findings[0].topicId, "streaming-content-rules");
+});
+
+Deno.test("chips use the pipeline's 0-100 scores; a tier override recomputes reliability and priority", async () => {
+  const { scoreFinding } = await import("../../src/lib/scores.ts");
+  const scored = { ...finding, scores: { priority: 77, materiality: 80, relevance: 95, confidence: 80, urgency: 60 } };
+  const c = toClient(client, plan, [scored]);
+  const f = c.findings[0];
+  const s = scoreFinding(c, f, {});
+  assert.equal(s.basis, "pipeline");
+  assert.deepEqual([s.priority, s.materiality, s.reliability, s.confidence, s.urgency], [77, 80, 95, 80, 60]);
+  const o = scoreFinding(c, f, { Reuters: { tier: 4, reason: "test", at: "" } });
+  assert.ok(o.overridden);
+  assert.equal(o.reliability, 25); // Tier 4
+  assert.equal(o.priority, Math.round(0.35 * 80 + 0.25 * 25 + 0.2 * 80 + 0.2 * 60));
+  const old = scoreFinding(toClient(client, plan, [finding]), toClient(client, plan, [finding]).findings[0], {});
+  assert.equal(old.basis, "computed"); // findings saved before the pipeline scored them
+});

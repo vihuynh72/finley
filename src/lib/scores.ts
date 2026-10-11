@@ -30,7 +30,12 @@ export interface Score {
   impact: number; baseEbitda: number; impactPct: number; impactBasis: string;
   corroboration: number; corrobLabel: string; days: number;
   sourceScores: { name: string; tier: Tier; score: number }[];
+  // "pipeline": the 0-100 scores runPipeline computed (findings.ts); "computed": worked out here from
+  // the topic model and source tiers, for findings saved before the pipeline scored them.
+  basis: "pipeline" | "computed"; overridden: boolean;
 }
+// The pipeline's weights (runPipeline/findings.ts); keep in sync.
+export const PIPELINE_WEIGHTS = { materiality: 0.35, relevance: 0.25, confidence: 0.2, urgency: 0.2 } as const;
 
 export function scoreFinding(c: Client, f: Finding, o: Overrides = {}): Score {
   const t = c.topics[f.topicId];
@@ -58,7 +63,15 @@ export function scoreFinding(c: Client, f: Finding, o: Overrides = {}): Score {
   const days = URGENCY_DAYS[f.severity];
   const urgency = days <= 90 ? 100 : days <= 365 ? 50 : 20;
   const priority = clamp(0.5 * materiality + 0.3 * confidence + 0.2 * urgency);
-  return { materiality, reliability, confidence, urgency, priority, impact, baseEbitda, impactPct, impactBasis, corroboration, corrobLabel, days, sourceScores };
+  const common = { impact, baseEbitda, impactPct, impactBasis, corroboration, corrobLabel, days, sourceScores };
+  const p = f.pipelineScores;
+  if (!p) return { materiality, reliability, confidence, urgency, priority, ...common, basis: "computed", overridden: false };
+  // An analyst's tier override is a judgment on the source, so it replaces the pipeline's reliability.
+  const overridden = f.sources.some((s) => o[s.name]);
+  const rel = overridden ? reliability : p.relevance;
+  const w = PIPELINE_WEIGHTS;
+  const prio = overridden ? clamp(w.materiality * p.materiality + w.relevance * rel + w.confidence * p.confidence + w.urgency * p.urgency) : p.priority;
+  return { materiality: p.materiality, reliability: rel, confidence: p.confidence, urgency: p.urgency, priority: prio, ...common, basis: "pipeline", overridden };
 }
 
 export interface SourceRow { name: string; type: SourceType; defaultTier: Tier; findings: string[]; url?: string }

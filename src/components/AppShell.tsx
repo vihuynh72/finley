@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import {
-  BarChart3, Building2, Cpu, Database, FlaskConical, Gavel, Globe, Landmark, LayoutDashboard, Loader2, LogOut, Moon, Plus,
+  BarChart3, Building2, Cpu, Database, FlaskConical, Gavel, Globe, Landmark, LayoutDashboard, Loader2, LogIn, LogOut, Moon, Plus,
   Radar, ShoppingCart, Sun, Tag, Truck, Users, Wheat, X, type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
@@ -73,9 +73,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="rounded-xl bg-sidebar-hover p-3 text-xs leading-relaxed text-sidebar-muted">
             Finley never edits your model. It flags what to look at, and you decide what goes into the forecast.
           </p>
-          <button className="flex items-center gap-2 px-3 text-xs text-sidebar-muted hover:text-foreground" onClick={() => base44.auth.logout("/")}>
-            <LogOut size={12} /> Sign out{app.user?.["email"] ? ` · ${app.user["email"]}` : ""}
-          </button>
+          {app.user ? (
+            <button className="flex items-center gap-2 px-3 text-xs text-sidebar-muted hover:text-foreground" onClick={() => base44.auth.logout("/")}>
+              <LogOut size={12} /> Sign out{app.user["email"] ? ` · ${app.user["email"]}` : ""}
+            </button>
+          ) : (
+            <Link to="/login" className="flex items-center gap-2 px-3 text-xs text-sidebar-muted hover:text-foreground">
+              <LogIn size={12} /> Sign in to scan, save and run backtests
+            </Link>
+          )}
         </div>
       </aside>
 

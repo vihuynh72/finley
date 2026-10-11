@@ -58,6 +58,9 @@ export function newsEvidence(briefing: Record<string, any> | null, findings: Rec
     const ifs = (o.conditions || []).map((x: any) => `- If ${clip(x.if_condition, 200)}, then ${clip(x.then_effect, 200)} (signpost: ${clip(x.signpost, 150)})`);
     parts.push(`<company_outlook verdict="${clip(o.verdict, 20)}">\n${clip(o.summary, 1200)}${ifs.length ? `\n${ifs.join("\n")}` : ""}\n</company_outlook>`);
   }
+  // The company lead's decision advice (opportunities, risk responses, exits), checked by code in findings.ts.
+  const advice = (b.company?.advice || []).slice(0, 4).map((a: any) => `- [${clip(a.kind, 20)}, ${clip(a.horizon, 20)}, confidence ${a.confidence}] ${clip(a.action, 200)}: ${clip(a.rationale, 300)}${a.check_first ? ` Check first: ${clip(a.check_first, 200)}` : ""}`);
+  if (advice.length) parts.push(`<decision_advice>\n${advice.join("\n")}\n</decision_advice>`);
   const tests = (b.company?.assumptions || []).map((a: any) => `- ${clip(a.text, 200)}: ${a.status}${a.note ? ` (${clip(a.note, 200)})` : ""}${a.counterpoint ? `; strongest counterpoint: ${clip(a.counterpoint, 200)}` : ""}`);
   if (tests.length) parts.push(`<assumption_tests>\n${tests.join("\n")}\n</assumption_tests>`);
   const fs = findings.slice(0, 12).map((f, i) => [

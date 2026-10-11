@@ -1,0 +1,49 @@
+{
+  "name": "PilotSignup",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "Fractional CFO",
+        "FP&A team",
+        "Finance leader",
+        "Other"
+      ]
+    },
+    "client_count": {
+      "type": "number"
+    },
+    "missed_assumption": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "email"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

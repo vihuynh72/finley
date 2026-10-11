@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, Check, Loader2, X } from "lucide-react";
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis } from "recharts";
@@ -75,6 +75,7 @@ function Metric({ label, value, sub, title }: { label: string; value: string; su
 function Evals() {
   const app = useApp();
   const qc = useQueryClient();
+  const nav = useNavigate();
   const c = EVAL_CASES[DEFAULT_CASE];
   const runs = useQuery({
     queryKey: ["evalRuns", DEFAULT_CASE],
@@ -91,6 +92,7 @@ function Evals() {
   const s: Rec | undefined = done?.summary;
 
   const start = async (o: { evalRunId?: string; retry?: boolean }) => {
+    if (!app.requireSignIn("run a backtest")) return;
     setRunning(true); setError(""); setProgress(null);
     try {
       const p = await runBacktest({ ...o, caseKey: DEFAULT_CASE, onProgress: setProgress });
@@ -102,7 +104,7 @@ function Evals() {
       await Promise.all([qc.invalidateQueries({ queryKey: ["evalRuns"] }), qc.invalidateQueries({ queryKey: ["clients"] })]);
     }
   };
-  const openClient = () => { const ev = done ?? latest; if (ev?.client_id) { app.setClientId(ev.client_id); } };
+  const openClient = () => { const ev = done ?? latest; if (ev?.client_id) { app.setClientId(ev.client_id); nav({ to: "/dashboard" }); } };
 
   const runCard = (
     <div className="card flex items-start justify-between gap-6 p-6">
@@ -132,7 +134,10 @@ function Evals() {
         {unfinished && !running ? (
           <button className="btn btn-primary" onClick={() => start({ evalRunId: unfinished.id })}>Resume backtest</button>
         ) : failed && !running ? (
-          <button className="btn btn-primary" onClick={() => start({ evalRunId: failed.id, retry: true })}>Retry from {failed.failed_stage || "the start"}</button>
+          <div className="flex gap-2">
+            <button className="btn" onClick={() => start({})}>Start new backtest</button>
+            <button className="btn btn-primary" onClick={() => start({ evalRunId: failed.id, retry: true })}>Retry from {failed.failed_stage || "the start"}</button>
+          </div>
         ) : (
           <button className="btn btn-primary" onClick={() => start({})} disabled={running}>{running ? <><Loader2 size={12} className="animate-spin" /> Running…</> : done ? "Run again" : "Run backtest"}</button>
         )}

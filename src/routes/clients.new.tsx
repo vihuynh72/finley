@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Loader2, Sparkles } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { base44 } from "@/api/base44Client";
@@ -42,6 +42,7 @@ function NewClient() {
   const set = (k: string, v: string) => setF((x) => ({ ...x, [k]: v }));
 
   const structure = async () => {
+    if (!app.requireSignIn("structure notes with AI")) return;
     setBusy("Structuring notes…"); setError("");
     try {
       const res = await base44.functions.invoke("structureProfile", { notes });
@@ -63,6 +64,7 @@ function NewClient() {
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
+    if (!app.requireSignIn("add a client")) return;
     setError("");
     try {
       setBusy("Saving client…");
@@ -95,6 +97,12 @@ function NewClient() {
         <p className="text-[11px] font-bold uppercase tracking-[1.1px] text-muted-foreground">Clients</p>
         <h1 className="text-[32px] font-normal leading-[48px]">New client</h1>
       </div>
+
+      {!app.user && (
+        <p className="rounded-lg bg-warning-soft px-4 py-3 text-sm text-warning-ink">
+          You're browsing signed out. <Link to="/login" className="font-bold underline">Sign in</Link> before filling this in: a client can only be saved by a signed-in analyst.
+        </p>
+      )}
 
       <Section title="Shortcut: paste notes">
         <div className="card space-y-3 p-6">

@@ -85,7 +85,8 @@ function ShellGate() {
   const app = useApp();
   if (path === "/" || path === "/login") return <Outlet />;
   if (!app.authChecked) return <Loading label="Signing in…" />;
-  if (!app.user) return <Navigate to="/login" />;
+  // Browsing works signed out when the Base44 app allows it; a refused read means sign in first.
+  if (app.needsSignIn) return <Navigate to="/login" />;
   if (app.clientsLoading) return <Loading label="Loading clients…" />;
   if (path === "/clients/new") return <AppShell><Outlet /></AppShell>;
   if (!app.clients.length && !app.loadError) return <Navigate to="/clients/new" />;

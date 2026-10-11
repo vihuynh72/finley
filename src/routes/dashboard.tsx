@@ -7,6 +7,7 @@ import { combinedDelta, ebitdaDelta, financials, monthly } from "@/lib/model";
 import { useApp, useClient } from "@/lib/store";
 import { Formula } from "@/components/bits";
 import { BridgeChart, Gauge, PerformanceChart } from "@/components/charts";
+import { AdvicePanel } from "@/components/AdvicePanel";
 import { FindingList } from "@/components/FindingList";
 import { Recommendations, useRecSummary } from "@/components/Recommendations";
 import { cn } from "@/lib/utils";
@@ -199,6 +200,8 @@ function Overview() {
         {listed.length ? <FindingList findings={listed} showTopic variant="overview" />
           : <p className="text-sm text-muted-foreground">{showAll ? "No open findings." : `No urgent findings open for ${client.name}.`}{period !== "all" ? " Try a longer period." : ""}</p>}
       </section>
+
+      <AdvicePanel briefing={app.briefing} />
 
       <div id="recs" className="scroll-mt-24"><Recommendations /></div>
     </div>
