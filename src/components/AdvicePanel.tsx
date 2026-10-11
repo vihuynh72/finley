@@ -2,6 +2,7 @@ import { ArrowDownRight, Clock, Eye, Search, ShieldAlert, TrendingUp } from "luc
 import type { ComponentType } from "react";
 import { fmtM } from "@/lib/data";
 import { cn } from "@/lib/utils";
+import { KeywordChips } from "./KeywordChips";
 
 // The company lead's decision advice, stored on the scan's Briefing (runPipeline/findings.ts buildAdvice).
 // Shown as minimal summaries: kind, horizon, the action, and a confidence bar.
@@ -42,7 +43,7 @@ export function AdvicePanel({ briefing }: { briefing: Record<string, any> | null
                 <span className={cn("inline-flex items-center gap-1 rounded px-2 py-1 font-bold", k.cls)}><k.Icon size={12} />{k.label}</span>
                 {a.horizon && <span className="inline-flex items-center gap-1 text-muted-foreground"><Clock size={10} />{HORIZONS[a.horizon] ?? a.horizon}</span>}
               </div>
-              <p className="text-sm font-semibold leading-snug">{a.action}</p>
+              <KeywordChips text={a.action} />
               <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                 <span>Confidence</span>
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">

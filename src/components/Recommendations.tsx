@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowUpRight, Check, ChevronDown, ChevronRight, Clock, Copy, X } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, ChevronRight, CircleCheck, Clock, Copy, Eye, HelpCircle, Pencil, X } from "lucide-react";
+import { KeywordChips } from "./KeywordChips";
 import { fmtM } from "@/lib/data";
 import { financials } from "@/lib/model";
 import { fmtK, recsFor, type Rec } from "@/lib/recs";
@@ -14,6 +15,10 @@ const typeCls: Record<Rec["type"], string> = {
   "Get information": "bg-tint text-strong",
   "Hold and watch": "bg-warning-soft text-warning-ink",
   "No action needed": "bg-muted text-muted-foreground",
+};
+
+const typeIcon: Record<Rec["type"], typeof Pencil> = {
+  "Change assumption": Pencil, "Get information": HelpCircle, "Hold and watch": Eye, "No action needed": CircleCheck,
 };
 
 export function useRecSummary() {
@@ -71,11 +76,12 @@ function RecCard({ r, evidence, live }: { r: Rec; evidence: boolean; live: boole
     );
   }
   const title = r.headline.replace(/^Before changing the plan, find out:\s*/i, "");
+  const TypeIcon = typeIcon[r.type];
   return (
     <div className="card p-4">
       <button className="flex w-full items-center gap-3 text-left" onClick={() => setOpen((o) => !o)}>
-        <span className={cn("shrink-0 rounded px-2 py-0.5 text-[11px] font-medium", typeCls[r.type])}>{r.label ?? r.type}</span>
-        <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">{title}</h3>
+        <span title={r.label ?? r.type} aria-label={r.label ?? r.type} className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-full", typeCls[r.type])}><TypeIcon size={14} /></span>
+        <KeywordChips text={title} className="flex-1" />
         {evidence && <span className="shrink-0 rounded bg-warning px-2 py-0.5 text-[11px] font-medium text-on-bright">Evidence changed</span>}
         <span className="num shrink-0 text-[11px] text-muted-foreground">{r.confidence}</span>
         <ChevronDown size={16} className={cn("shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
@@ -86,6 +92,7 @@ function RecCard({ r, evidence, live }: { r: Rec; evidence: boolean; live: boole
         <span className="rounded border px-2 py-0.5 text-muted-foreground">{r.effort}</span>
         <span className="text-muted-foreground">{r.timing}</span>
       </div>
+      <h3 className="text-sm font-semibold">{title}</h3>
       <p className="text-sm text-subtle">{r.why}</p>
       <div className="flex flex-wrap gap-2">
         {findings.map((f) => (
