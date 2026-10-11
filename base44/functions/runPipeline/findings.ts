@@ -10,8 +10,8 @@ import { UI_TOPICS } from "./research.ts";
 // model) deciding what the evidence can support: unknown ids are dropped, repeats aren't saved twice,
 // confidence is capped by the evidence, materiality stays within one step of the computed money.
 
-// The urgent-alert rule. Keep in sync with the empty-state text in src/components/dashboard/FindingsList.jsx
-// and the "High" badge (priority >= 60) in src/components/figma/UrgentFindingsList.jsx.
+// The urgent-alert rule. Keep in sync with the severity mapping in src/lib/live.ts (is_alert -> urgent;
+// priority >= 60 or materiality >= 4 -> review).
 export const isAlert = (m: number, c: number, u: number) => m >= 4 && c >= 3 && u >= 4;
 
 const AGENT_BY_TOPIC: Record<string, string> = { pricing_competition: "competition", demand_customers: "market" }; // the rest: "risk"

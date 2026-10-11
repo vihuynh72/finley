@@ -64,7 +64,7 @@ async function loadClient(id: string) {
     E.Finding.filter({ client_id: id }, { sort: "-created_date", limit: 150 }),
     E.Scenario.filter({ client_id: id }, { sort: "-created_date", limit: 50 }),
     E.Run.filter({ client_id: id }, { sort: "-created_date", limit: 1 }),
-    E.Briefing.filter({ client_id: id }, { sort: "-created_date", limit: 1 }).catch(() => null),
+    E.Briefing.filter({ client_id: id }, { sort: "-created_date", limit: 5 }).catch(() => null),
   ]);
   // A backtest client is never analyst-reviewed; its scorecard comes from the judged EvalRun.
   const evalRuns = rec?.["eval_case"]
@@ -81,7 +81,9 @@ async function loadClient(id: string) {
     overrides: (rec["source_overrides"] || {}) as Overrides,
     recStatus: (rec["rec_decisions"] || {}) as Record<string, RecStatus>,
     latestRun: items(runs)[0] ?? null,
-    briefing: items(briefings)[0] ?? null,
+    // A scan whose company lead failed still writes a Briefing, empty of outlook and advice: show the
+    // newest one that has something to say rather than letting it hide the last good scan's advice.
+    briefing: items(briefings).find((b) => b["summary"] || b["company"]?.["advice"]?.length) ?? null,
     evalRun: items(evalRuns)[0] ?? null,
   };
 }
@@ -272,7 +274,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             // The pipeline answers only when it finishes (up to about 5 minutes), so the Run is polled instead.
             base44.functions.invoke("runPipeline", { run_id: run.id }).catch((e: any) => {
               const status = e?.status ?? e?.response?.status;
-              if (status && status < 500 && status !== 408) early = e.message || `error ${status}`;
+              if (status && status < 500 && status !== 408) early = e?.response?.data?.error || e.message || `error ${status}`;
             });
             resumed.current = run.id;
             await follow(run.id, Date.now(), () => early);
