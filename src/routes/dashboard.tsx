@@ -222,7 +222,7 @@ function Overview() {
         </div>
 
         <div className={cn(card, "space-y-6 p-6")}>
-          <CardHead title="Financial performance" right={
+          <CardHead title={`Financial performance · FY${client.evalCase && client.reforecastDue ? client.reforecastDue.slice(0, 4) : new Date().getFullYear()} plan year`} right={
             <label className="relative flex items-center gap-2 rounded-full border bg-popover px-4 py-1.5 text-[11px] font-bold text-subtle">
               {metric === "ebitda" ? "EBITDA" : "Revenue"} <ChevronDown size={8} />
               <select aria-label="Measure" value={metric} onChange={(e) => setMetric(e.target.value as "ebitda" | "rev")} className="absolute inset-0 cursor-pointer opacity-0">
