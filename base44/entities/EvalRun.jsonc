@@ -1,0 +1,37 @@
+{
+  "name": "EvalRun",
+  "type": "object",
+  "description": "One backtest: a company frozen at a cutoff date (shared/eval/cases.ts), run through keyword planning, dated news collection and the agent pipeline, then forecast and scored against what happened. runPipeline advances it a stage at a time ({ eval: { eval_run_id } }); the caller re-invokes until stage is done.",
+  "properties": {
+    "case_key": { "type": "string", "description": "Key in shared/eval/cases.ts, e.g. netflix-2023" },
+    "client_id": { "type": "string", "description": "The backtest client (Client.eval_case set), seeded from the case profile" },
+    "cutoff": { "type": "string", "format": "date", "description": "Nothing published after this day is used" },
+    "lookback_from": { "type": "string", "format": "date", "description": "Oldest news collected" },
+    "stage": {
+      "type": "string",
+      "enum": ["queued", "plan", "collect", "analyze", "forecast", "score", "done", "failed"],
+      "default": "queued"
+    },
+    "plan_id": { "type": "string", "description": "KeywordPlan made as of the cutoff" },
+    "corpus_key": { "type": "string", "description": "EvalSource rows for this run's news: plan id plus windows, so a re-run reuses collected news" },
+    "windows": {
+      "type": "array",
+      "items": { "type": "object", "properties": { "from": { "type": "string" }, "to": { "type": "string" } } },
+      "description": "Date windows each search runs over"
+    },
+    "collected_pairs": { "type": "array", "items": { "type": "string" }, "description": "search:window pairs already fetched, so collection can resume" },
+    "corpus_stats": { "type": "object", "description": "Fetched, kept and excluded counts by reason, searches failed" },
+    "run_id": { "type": "string", "description": "The backtest Run (Run.kind backtest)" },
+    "briefing_id": { "type": "string" },
+    "forecasts": { "type": "object", "description": "{ news, no_news }: each a forecast (quarters, kpis, questions, recommendations, outlook)" },
+    "judgments": { "type": "object", "description": "Judge labels: recommendation matches per condition, finding verdicts" },
+    "summary": { "type": "object", "description": "Deterministic scores (shared/eval/scoring.ts) per condition, the gap, and finding hold-up" },
+    "model": { "type": "string", "description": "Forecast model" },
+    "errors": { "type": "array", "items": { "type": "string" } },
+    "usage": { "type": "array", "items": { "type": "object" }, "description": "Time and tokens per agent across stages" },
+    "lease_until": { "type": "string", "format": "date-time", "description": "An invocation is working on this run until then; others back off" },
+    "error": { "type": "string" },
+    "finished_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["case_key"]
+}

@@ -73,6 +73,15 @@
         }
       }
     },
+    "reforecast_due": {
+      "type": "string",
+      "format": "date",
+      "description": "Next reforecast date; the dashboard counts down to it"
+    },
+    "eval_case": {
+      "type": "string",
+      "description": "Set on clients created by a backtest (e.g. netflix-2023): the profile as of the case's cutoff. Empty for real clients."
+    },
     "last_run_at": {
       "type": "string",
       "format": "date-time"

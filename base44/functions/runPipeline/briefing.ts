@@ -7,7 +7,7 @@ import type { LeadOutput } from "./lead.ts";
 // Lists are capped so every field stays well under Base44's per-field size limit.
 
 export interface BriefingParts {
-  client: Record<string, any>; run_id: string; startedAt: number; corpus: Corpus; research: CheckedResearch;
+  client: Record<string, any>; run_id: string; startedAt: number; asOf?: number; corpus: Corpus; research: CheckedResearch;
   market: { snapshot: any; note: string }; picture: Record<string, any> | null; thesis: { ledger: any[]; profile_checks: any[] };
   lead: LeadOutput | null; assumptions: Record<string, any>[]; saved: Record<string, any>[]; ongoing: Record<string, any>[]; dropped: string[];
   scenarios: Record<string, any> | null; questions: Record<string, any>[]; charts: Record<string, any>; alert_email: Record<string, any>;
@@ -19,7 +19,7 @@ export function buildBriefing(x: BriefingParts) {
   const byLens = ["company", "competitor", "regulation", "market"].map((lens) => ({ lens, stories: stories.filter((a) => a.lens === lens).length }));
   const ledger = new Map((x.thesis.ledger || []).map((l: any) => [Number(l.assumption_index), l]));
   return {
-    client_id: x.client.id, run_id: x.run_id, as_of: new Date(x.startedAt).toISOString(),
+    client_id: x.client.id, run_id: x.run_id, as_of: new Date(x.asOf ?? x.startedAt).toISOString(),
     status: x.errors.length ? "partial" : "complete",
     headline: x.picture?.headline ?? "", summary: x.lead?.outlook?.summary ?? "",
     market_data: x.market.snapshot ?? { note: x.market.note },

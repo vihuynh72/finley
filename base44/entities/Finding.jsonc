@@ -76,6 +76,23 @@
           },
           "date": {
             "type": "string"
+          },
+          "outlet": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Primary company",
+              "Trade press",
+              "Government",
+              "Blog unverified"
+            ],
+            "description": "Source type, decided by code from the outlet and URL (shared/sources.ts)"
+          },
+          "tier": {
+            "type": "number",
+            "description": "Default reliability tier 1-4 (1 = filings and government, 4 = unverified blogs); analysts can override per source (SourceOverride)"
           }
         }
       }
@@ -105,9 +122,11 @@
       "enum": [
         "pending",
         "validated",
-        "rejected"
+        "rejected",
+        "needs_research"
       ],
-      "default": "pending"
+      "default": "pending",
+      "description": "Analyst decision. Dashboard terms: pending = open, validated = added to forecast review, needs_research = needs research, rejected = dismissed"
     },
     "feedback": {
       "type": "string"
@@ -115,6 +134,43 @@
     "incorporate": {
       "type": "boolean",
       "default": false
+    },
+    "facts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Observed facts, one per cited development"
+    },
+    "change_view": {
+      "type": "string",
+      "description": "What would most change this assessment"
+    },
+    "effect": {
+      "type": "string",
+      "enum": [
+        "challenged",
+        "under_pressure",
+        "supported",
+        "holding"
+      ],
+      "description": "How it bears on the client's assumptions"
+    },
+    "exposure": {
+      "type": "string",
+      "description": "Name of the keyword-plan exposure (dashboard tab) whose searches found most of its sources; empty when only company or competitor searches did"
+    },
+    "topic_key": {
+      "type": "string",
+      "description": "The pipeline's topic (input_costs, pricing_competition, demand_customers, logistics_freight, regulation)"
+    },
+    "event_date": {
+      "type": "string",
+      "description": "ISO day of the newest cited article"
+    },
+    "impact_inputs": {
+      "type": "object",
+      "description": "The impact estimator's inputs (pnl_line, shock_pct, exposure_pct, pass_through_pct, shock_min_pct, shock_max_pct, persistence, quarters, effect), used to fill a topic's sliders"
     }
   },
   "required": [

@@ -41,7 +41,8 @@ How to write keywords:
 - Never repeat a keyword or a near-duplicate across forces.
 - Aim for 5 to 20 keywords in total.`;
 
-export async function planKeywords(client: Record<string, any>, opts: { usage?: AgentUsage[]; deadline?: number } = {}): Promise<KeywordPlan> {
+// opts.today (ISO day) dates the plan: a backtest plans as of its cutoff, not as of the real today.
+export async function planKeywords(client: Record<string, any>, opts: { usage?: AgentUsage[]; deadline?: number; today?: string } = {}): Promise<KeywordPlan> {
   const call = {
     name: "keywords/planner",
     system: RULES,
@@ -49,7 +50,7 @@ export async function planKeywords(client: Record<string, any>, opts: { usage?: 
     // In a live test on a fictional GPU maker, high matched xhigh's coverage in 55s instead of 123s.
     effort: "high" as const,
     deadline: opts.deadline,
-    prompt: `Today is ${new Date().toISOString().slice(0, 10)}.\n\n<client_profile>\n${profileText(client)}\n</client_profile>\n\nMap the forces that could make this business volatile and write the search keywords for each.`,
+    prompt: `Today is ${opts.today || new Date().toISOString().slice(0, 10)}.\n\n<client_profile>\n${profileText(client)}\n</client_profile>\n\nMap the forces that could make this business volatile and write the search keywords for each.`,
   };
   // An empty or cut-off answer is rare; one retry with less thinking is cheap insurance.
   const answer = await runAgent<{ exposures: Exposure[] }>(call, opts.usage)

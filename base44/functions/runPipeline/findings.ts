@@ -1,4 +1,5 @@
 import { canon, clampScore } from "../../shared/schema.ts";
+import { classifySource } from "../../shared/sources.ts";
 import type { Article } from "./corpus.ts";
 import type { CheckedDevelopment } from "./evidence.ts";
 import type { Quantified } from "./impacts.ts";
@@ -33,8 +34,10 @@ export function buildFindings(x: Inputs) {
   for (const f of (x.findings || []).slice(0, 8)) {
     const cited = ids(f.development_ids).map((id) => devs.get(id)!);
     if (!cited.some((d) => d.grounded)) { dropped.push(`"${f.title}": no cited development passed the source check`); continue; }
-    const sources = [...new Map(cited.flatMap((d) => d.article_ids).map((id) => articles.get(id)).filter((a): a is Article => !!a)
-      .map((a) => [a.url, { title: `${a.title} (${a.source})`, url: a.url, date: a.date }])).values()];
+    const citedArticles = cited.flatMap((d) => d.article_ids).map((id) => articles.get(id)).filter((a): a is Article => !!a);
+    // Each source also gets its type and reliability tier (shared/sources.ts), for the Sources page and scoring.
+    const sources = [...new Map(citedArticles.map((a) => [a.url, { title: `${a.title} (${a.source})`, url: a.url, date: a.date,
+      outlet: a.source, ...classifySource(a.source, a.url, x.client.name) }])).values()];
     // A repeat is a finding whose every source already backed one earlier finding; it isn't saved again.
     const repeatOf = sources.length ? x.prior.find((p) => sources.every((s) => (p.sources || []).some((ps: any) => ps.url === s.url))) : undefined;
     if (repeatOf || canon(f.novelty, ["repeat"], "") === "repeat") { ongoing.push({ title: f.title, prior_id: repeatOf?.id ?? "", prior_title: repeatOf?.title ?? f.prior_title }); continue; }
@@ -57,6 +60,17 @@ export function buildFindings(x: Inputs) {
     const linked = new Set<number>([...(candidate?.assumption_indexes || []), ...(x.ledger || []).filter((l) =>
       [...(l.challenging_ids || []), ...(l.supporting_ids || [])].some((id: string) => devIds.has(x.mergedInto[id] || id))).map((l) => Number(l.assumption_index))]);
     const assumptions = [...linked].map((i) => x.client.assumptions?.[i]).filter(Boolean);
+    // The dashboard tab: the keyword-plan exposure whose searches found most of the cited articles
+    // (ties go to the first found); "" when only the company and competitor searches found it.
+    const tally = new Map<string, number>();
+    for (const a of citedArticles) if (a.exposure) tally.set(a.exposure, (tally.get(a.exposure) ?? 0) + 1);
+    const exposure = [...tally.entries()].sort((p, q) => q[1] - p[1])[0]?.[0] ?? "";
+    // How it bears on the client's assumptions, for the dashboard's status pills: evidence the thesis
+    // tester listed against an assumption wins, then evidence for one, then the impact's direction.
+    const touches = (list: string[]) => (list || []).some((id) => devIds.has(x.mergedInto[id] || id));
+    const effect = (x.ledger || []).some((l) => touches(l.challenging_ids)) ? "challenged"
+      : (x.ledger || []).some((l) => touches(l.supporting_ids)) ? "supported"
+      : candidate?.effect === "adverse" ? "under_pressure" : candidate?.effect === "favorable" ? "supported" : "holding";
     const otherLabels = Object.values(UI_TOPICS).filter((l) => l !== UI_TOPICS[topic]).map((l) => l.toLowerCase());
     const drivers = [UI_TOPICS[topic], ...assumptions.map((a: any) => a.driver).filter(Boolean)]
       .filter((d, i, all) => all.findIndex((y) => y.toLowerCase() === d.toLowerCase()) === i && (i === 0 || !otherLabels.some((o) => d.toLowerCase().includes(o))));
@@ -68,6 +82,11 @@ export function buildFindings(x: Inputs) {
       uncertainty: `Evidence: ${outlets.size} independent outlet${outlets.size === 1 ? "" : "s"}${cited.every((d) => d.headline_only) ? ", headline only" : ""}, newest ${newest || "undated"}. Counter-evidence: ${stripIds(f.counter_summary)} Key unknown: ${stripIds(f.key_unknown)}`,
       materiality, confidence, urgency, priority: materiality * confidence * urgency, is_alert: isAlert(materiality, confidence, urgency),
       sources, ...(candidate?.impact ? { impact: candidate.impact } : {}), review_status: "pending",
+      facts: cited.map((d) => d.fact).filter(Boolean), change_view: stripIds(f.key_unknown), effect, exposure, topic_key: topic, event_date: newest,
+      // The estimator's inputs, so the dashboard can set a topic's sliders from this finding ("Use in scenario").
+      ...(candidate?.quantified ? { impact_inputs: { pnl_line: candidate.pnl_line, shock_pct: candidate.shock_pct, exposure_pct: candidate.exposure_pct,
+        pass_through_pct: candidate.pass_through_pct, shock_min_pct: candidate.shock_min_pct, shock_max_pct: candidate.shock_max_pct,
+        persistence: candidate.persistence, quarters: candidate.quarters, effect: candidate.effect } } : {}),
     });
     candidate_ids.push(candidate?.quantified ? candidate.id : "");
   }

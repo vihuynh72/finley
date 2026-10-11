@@ -1,8 +1,13 @@
 // What the research swarm reads. entry.ts runs the Bright Data searches (searches.ts picks them) and
 // dedupes the results; this module numbers, dates and labels those articles for the agents.
 
+import { isoDay } from "../../shared/dates.ts";
+export { isoDay };
+
 export type Lens = "company" | "competitor" | "regulation" | "market";
-export type Search = { query: string; lens: Lens }; // one Bright Data search, and which research agent reads its results
+// One Bright Data search, which research agent reads its results, and the keyword plan exposure
+// (pretraining force) it watches, if any: findings are filed under that exposure's dashboard tab.
+export type Search = { query: string; lens: Lens; exposure?: string };
 export type RawArticle = { title: string; url: string; source: string; date: string; snippet: string };
 
 export interface Article {
@@ -11,23 +16,13 @@ export interface Article {
   snippet: string; // "" when Bright Data returned only a headline
   date: string; // ISO day from Bright Data's relative date ("3 days ago"), or "" if unreadable
   lens: Lens; // the first search that found it, the same order the URL dedupe used
-  query: string; mentions_client: boolean;
+  query: string; exposure: string; mentions_client: boolean; // exposure: "" for the company and competitor searches
   duplicate_of: string; // id of an earlier article with the same headline (a syndicated copy), or ""
 }
 
 export interface Corpus { today: string; articles: Article[]; failed_queries: string[] }
 
-const UNIT_MS: Record<string, number> = { minute: 6e4, hour: 3.6e6, day: 8.64e7, week: 6.048e8, month: 2.592e9, year: 3.1536e10 };
 const MAX_CHARS = 180_000; // about 55K tokens, well under Haiku 5.5's 100K-token price step
-
-// Bright Data gives news dates as text such as "23 hours ago" or "Oct 3, 2026".
-export function isoDay(raw: string, now: Date): string {
-  const text = (raw || "").trim().toLowerCase();
-  const rel = text.match(/^(\d+|an?)\s+(minute|hour|day|week|month|year)s?\s+ago$/);
-  const ms = rel ? now.getTime() - (Number(rel[1]) || 1) * UNIT_MS[rel[2]]
-    : text === "yesterday" ? now.getTime() - UNIT_MS.day : Date.parse(raw);
-  return Number.isFinite(ms) ? new Date(ms).toISOString().slice(0, 10) : "";
-}
 
 const clean = (text: string) => (text || "").replace(/[<>"]/g, "").replace(/\s+/g, " ").trim();
 const headlineKey = (title: string) => clean(title).toLowerCase().replace(/\s[-–|]\s[^-–|]+$/, "").replace(/[^a-z0-9]+/g, " ").trim();
@@ -45,7 +40,7 @@ export function buildCorpus(client: Record<string, any>, searches: Search[], res
     if (key && !duplicate_of) headlines.set(key, `A${i}`);
     return {
       id: `A${i}`, title: clean(a.title), url: a.url, source: clean(a.source) || "unknown outlet",
-      snippet: clean(a.snippet), date: isoDay(a.date, now), lens: searches[q].lens, query: searches[q].query,
+      snippet: clean(a.snippet), date: isoDay(a.date, now), lens: searches[q].lens, query: searches[q].query, exposure: searches[q].exposure || "",
       mentions_client: !!name && `${a.title} ${a.snippet}`.toLowerCase().includes(name), duplicate_of,
     };
   });

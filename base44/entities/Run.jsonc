@@ -27,6 +27,20 @@
     "error": {
       "type": "string"
     },
+    "as_of": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The moment the run reasons from; earlier than created_date for a backtest"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["live", "backtest"],
+      "default": "live"
+    },
+    "eval_run_id": {
+      "type": "string",
+      "description": "The EvalRun that started this run, for backtests"
+    },
     "briefing_id": {
       "type": "string",
       "description": "The Briefing this run produced"

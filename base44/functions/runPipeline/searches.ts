@@ -14,7 +14,7 @@ const LENS_BY_CATEGORY: Record<string, Lens> = {
   regulation_policy: "regulation", geopolitics_trade: "regulation", labor_talent: "regulation",
 };
 
-type PlanLike = { exposures?: { category: string; sensitivity: string; keywords?: string[] }[] } | null | undefined;
+type PlanLike = { exposures?: { name?: string; category: string; sensitivity: string; keywords?: string[] }[] } | null | undefined;
 
 export function planSearches(client: Record<string, any>, plan: PlanLike): Search[] {
   const core: Search[] = [
@@ -32,7 +32,7 @@ export function planSearches(client: Record<string, any>, plan: PlanLike): Searc
       const key = query.toLowerCase();
       if (seen.has(key) || fromPlan.length >= MAX_PLAN_SEARCHES) continue;
       seen.add(key);
-      fromPlan.push({ query, lens: LENS_BY_CATEGORY[force.category] ?? "market" });
+      fromPlan.push({ query, lens: LENS_BY_CATEGORY[force.category] ?? "market", exposure: force.name || "" });
     }
   }
   return [...core, ...fromPlan];

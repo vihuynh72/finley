@@ -18,27 +18,33 @@ import { answerQuestions, runScenarioAgent } from "./scenario.ts";
 //   Round 2  research lead (market picture)  |  company team (thesis tester, impact estimator)
 //   Round 3  company lead (findings, outlook)  |  scenario agent (what-if questions)
 // Each round has a deadline so the run ends well inside Base44's 5-minute limit.
+//
+// startedAt is the stopwatch for that limit; asOf (default startedAt) is the moment the run reasons
+// from: "today" in prompts, market data, recent findings. A backtest (eval/stages.ts) passes a past
+// asOf and backtest: true, which also skips earlier findings, saved questions and alert emails, since
+// those come from after the cutoff.
 
 const FINISH_BY_MS = 270_000; // after the handler started, leaving time for the final writes
 
 export async function runAgentPipeline(ctx: { base44: any; user: any; run_id: string; client: Record<string, any>; searches: Search[];
-  results: PromiseSettledResult<RawArticle[]>[]; articles: RawArticle[]; startedAt: number }) {
+  results: PromiseSettledResult<RawArticle[]>[]; articles: RawArticle[]; startedAt: number; asOf?: number; backtest?: boolean }) {
   const { base44, client, run_id } = ctx;
   const usage: AgentUsage[] = [], errors: string[] = [];
   const stopAt = ctx.startedAt + FINISH_BY_MS;
   const within = (ms: number) => Math.min(Date.now() + ms, stopAt);
   const soft = <T>(label: string, work: Promise<T>, fallback: T) => work.catch((e) => { errors.push(`${label}: ${e.message}`); return fallback; });
-  const corpus = buildCorpus(client, ctx.searches, ctx.results, ctx.articles, new Date(ctx.startedAt));
-  const monthAgo = new Date(ctx.startedAt - 30 * 86_400_000).toISOString();
+  const asOf = ctx.asOf ?? ctx.startedAt;
+  const corpus = buildCorpus(client, ctx.searches, ctx.results, ctx.articles, new Date(asOf));
+  const monthAgo = new Date(asOf - 30 * 86_400_000).toISOString();
 
   // Round 1. The research swarm throws only if all three agents fail, which fails the run.
   const [swarm, market, prior, asked] = await Promise.all([
     runResearchSwarm(corpus, client, { deadline: within(100_000), usage }),
-    companyMarket(client, new Date(ctx.startedAt)),
-    soft("earlier findings", base44.entities.Finding.filter({ client_id: client.id }, { sort: "-created_date", limit: 30 })
+    companyMarket(client, new Date(asOf)),
+    ctx.backtest ? [] : soft("earlier findings", base44.entities.Finding.filter({ client_id: client.id }, { sort: "-created_date", limit: 30 })
       .then((p: any) => (p.items || []).filter((f: any) => (f.created_date || "") >= monthAgo)), []),
-    soft("saved scenarios", base44.entities.Scenario.filter({ client_id: client.id }, { sort: "-created_date", limit: 20 })
-      .then((p: any) => (p.items || []).map((s: any) => s.question)), []),
+    ctx.backtest ? [] : soft("saved scenarios", base44.entities.Scenario.filter({ client_id: client.id }, { sort: "-created_date", limit: 20 })
+      .then((p: any) => (p.items || []).map((s: any) => s.question).filter(Boolean)), []),
   ]);
   const research = checkResearch(corpus, swarm);
   errors.push(...research.failed_agents);
@@ -79,10 +85,12 @@ export async function runAgentPipeline(ctx: { base44: any; user: any; run_id: st
   try {
     const used = candidates.filter((c) => built.candidate_ids.includes(c.id));
     const titleOf = (id: string) => developments.find((d: any) => d.id === (mergedInto[id] || id))?.title ?? "";
-    const alert_email = await sendAlertEmail(base44, ctx.user?.email, client, saved.filter((f: any) => f.is_alert), market, coverageNote(corpus));
+    const alert_email = ctx.backtest
+      ? { status: "skipped_backtest", to: "", subject: "", sent_at: "", finding_ids: [], error: "" }
+      : await sendAlertEmail(base44, ctx.user?.email, client, saved.filter((f: any) => f.is_alert), market, coverageNote(corpus));
     if (alert_email.status === "failed") errors.push(`alert email: ${alert_email.error}`);
     const briefing = await base44.entities.Briefing.create(buildBriefing({
-      client, run_id, startedAt: ctx.startedAt, corpus, research, market, picture, thesis, lead, assumptions, saved, ongoing: built.ongoing, dropped: built.dropped,
+      client, run_id, startedAt: ctx.startedAt, asOf, corpus, research, market, picture, thesis, lead, assumptions, saved, ongoing: built.ongoing, dropped: built.dropped,
       scenarios: buildScenarios(client, used, market.snapshot, scenario?.stories ?? null), questions: answerQuestions(client, market, scenario?.questions ?? [], titleOf),
       charts: buildCharts(client, saved, assumptions), alert_email, usage, errors,
     }));

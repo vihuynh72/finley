@@ -17,10 +17,11 @@ export interface AgentCall {
   effort?: Effort; // default "high"; "xhigh" thinks much longer, so use it only when time allows
   maxTokens?: number;
   deadline?: number; // epoch ms; the call is aborted then so the run beats Base44's 5-minute cap
+  model?: string; // defaults to MODEL; the backtest can set EVAL_MODEL to compare models
 }
 
 // One entry per agent call; saved with the run so cost, speed and thinking depth show per agent.
-export type AgentUsage = { agent: string; effort: Effort; ms: number; input_tokens: number; output_tokens: number; thinking_tokens: number };
+export type AgentUsage = { agent: string; model?: string; effort: Effort; ms: number; input_tokens: number; output_tokens: number; thinking_tokens: number };
 
 export async function runAgent<T>(call: AgentCall, usage?: AgentUsage[]): Promise<T> {
   // Created per call: Base44 resolves secrets per request, so the key is read inside the handler.
@@ -29,7 +30,7 @@ export async function runAgent<T>(call: AgentCall, usage?: AgentUsage[]): Promis
   const signal = call.deadline ? AbortSignal.timeout(Math.max(1000, call.deadline - Date.now())) : undefined;
   const started = Date.now();
   const message = await client.messages.stream({
-    model: MODEL,
+    model: call.model || MODEL,
     max_tokens: call.maxTokens ?? 64000, // room for long thinking plus the JSON answer
     system: call.system,
     messages: [{ role: "user", content: call.prompt }],
@@ -39,7 +40,7 @@ export async function runAgent<T>(call: AgentCall, usage?: AgentUsage[]): Promis
   const { input_tokens, output_tokens, output_tokens_details } = message.usage;
   const thinking_tokens = output_tokens_details?.thinking_tokens ?? 0;
   const ms = Date.now() - started;
-  usage?.push({ agent: call.name, effort, ms, input_tokens, output_tokens, thinking_tokens });
+  usage?.push({ agent: call.name, model: call.model || MODEL, effort, ms, input_tokens, output_tokens, thinking_tokens });
   console.log(`[agent] ${call.name} effort=${effort} ${ms}ms in=${input_tokens} out=${output_tokens} thinking=${thinking_tokens}`);
   return readAnswer<T>(call.name, message);
 }

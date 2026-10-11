@@ -8,6 +8,7 @@
       "description": "Hash of the client profile text this plan was built from; a new plan is made only when it changes"
     },
     "model": { "type": "string" },
+    "as_of": { "type": "string", "format": "date", "description": "The date the planner was told it is: a backtest plans as of its cutoff. Empty means the day it was created." },
     "keyword_count": { "type": "number" },
     "exposures": {
       "type": "array",

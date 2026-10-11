@@ -1,0 +1,28 @@
+{
+  "name": "EvalSource",
+  "type": "object",
+  "description": "One news result collected for a backtest, and whether it was kept. Rows are shared by every EvalRun with the same corpus_key, so the same news can be re-analysed without paying Bright Data again.",
+  "properties": {
+    "corpus_key": { "type": "string" },
+    "search_index": { "type": "number", "description": "Index into the plan's searches (runPipeline/searches.ts order)" },
+    "query": { "type": "string" },
+    "lens": { "type": "string" },
+    "exposure": { "type": "string" },
+    "window_from": { "type": "string", "format": "date" },
+    "window_to": { "type": "string", "format": "date" },
+    "title": { "type": "string" },
+    "url": { "type": "string" },
+    "source": { "type": "string" },
+    "date_raw": { "type": "string", "description": "The date as Google showed it" },
+    "date": { "type": "string", "description": "ISO day, or empty if unreadable" },
+    "snippet": { "type": "string" },
+    "included": { "type": "boolean" },
+    "exclusion": {
+      "type": "string",
+      "enum": ["", "undated", "after_cutoff", "before_lookback"],
+      "description": "Why the article was left out of the corpus"
+    },
+    "flag": { "type": "string", "description": "Kept but suspicious, e.g. the text names a year after the cutoff" }
+  },
+  "required": ["corpus_key", "url"]
+}

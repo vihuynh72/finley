@@ -1,30 +1,9 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import { secrets } from "base44:runtime";
 import { claudeJSON, profileText } from "../../shared/claude.ts";
+import { searchNews } from "../../shared/brightdata.ts";
 import { planSearches } from "./searches.ts";
 import { runAgentPipeline } from "./pipeline.ts";
-
-async function searchNews(q) {
-  // Read per request: Base44 resolves secrets inside the handler, and a module-level read is undefined.
-  const rawZone = (secrets.get("BRIGHTDATA_SERP_ZONE") || "").trim();
-  const zone = (rawZone.match(/zone\W+([\w-]+)/) || [null, rawZone])[1];
-  const url = `https://www.google.com/search?q=${encodeURIComponent(q)}&tbm=nws&brd_json=1`;
-  const res = await fetch("https://api.brightdata.com/request", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${secrets.get("BRIGHTDATA_API_KEY")}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ zone, url, format: "raw" }),
-    signal: AbortSignal.timeout(45000),
-  });
-  if (!res.ok) throw new Error("Bright Data " + res.status + ": " + (await res.text()).slice(0, 200));
-  // Bright Data can answer 200 with an empty body and report the real failure only in this header.
-  const brdError = res.headers.get("x-brd-error");
-  if (brdError) throw new Error("Bright Data: " + brdError.slice(0, 200));
-  const data = JSON.parse(await res.text());
-  const items = data.news || data.organic || [];
-  return items.slice(0, 8).map((n) => ({
-    title: n.title, url: n.link || n.url, source: n.source, date: n.date || "", snippet: n.description || n.snippet || "",
-  }));
-}
 
 const AGENTS = {
   competition: "competitive developments: launches, pricing changes, funding, M&A, partnerships, substitutes",
@@ -51,7 +30,7 @@ export default async function (req) {
     const plans = await base44.entities.KeywordPlan.filter({ client_id: client.id }, { sort: "-created_date", limit: 1 }).catch(() => null);
     const searches = planSearches(client, plans?.items?.[0]);
     const queries = searches.map((s) => s.query);
-    const results = await Promise.allSettled(queries.map(searchNews));
+    const results = await Promise.allSettled(queries.map((q) => searchNews(q)));
     const seen = new Set();
     const articles = results.flatMap((r) => (r.status === "fulfilled" ? r.value : [])).filter((a) => a.url && !seen.has(a.url) && seen.add(a.url));
     if (!articles.length) throw new Error("No articles collected: " + results.map((r) => r.reason?.message).filter(Boolean).join(" | "));
