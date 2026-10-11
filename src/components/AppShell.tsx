@@ -90,7 +90,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-6 border-b bg-background px-8">
           <label className="flex items-center gap-4">
             <span className="text-xs font-medium uppercase tracking-[0.6px] text-muted-foreground">Client</span>
-            <span className="relative">
+            <span className="relative inline-flex items-center">
               <select value={app.clientId} onChange={(e) => app.setClientId(e.target.value)}
                 className="appearance-none rounded-lg border bg-card py-1.5 pl-3 pr-8 text-sm font-semibold text-foreground">
                 {app.clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
