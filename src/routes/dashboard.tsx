@@ -228,7 +228,7 @@ function Overview() {
             </label>
           } />
           <PerformanceChart data={months} label={metric === "ebitda" ? "EBITDA" : "Revenue"} />
-          <Formula>Month = plan-year {metric === "ebitda" ? "EBITDA" : "revenue"} × seasonality weight. Lime = your slider changes plus the open findings' implied impact ({fmtM(metric === "ebitda" ? comb.ebitda : comb.rev)} a year); dashed = plan ({fmtM(metric === "ebitda" ? base.ebitda : base.rev)}); the band spans every topic's downside-to-upside presets.</Formula>
+          <Formula>Week = plan-year {metric === "ebitda" ? "EBITDA" : "revenue"} × seasonality weight ÷ 4, with illustrative week-to-week swings (±6%). Lime = your slider changes plus the open findings' implied impact ({fmtM(metric === "ebitda" ? comb.ebitda : comb.rev)} a year); dashed = plan ({fmtM(metric === "ebitda" ? base.ebitda : base.rev)}); the band spans every topic's downside-to-upside presets.</Formula>
         </div>
       </div>
 

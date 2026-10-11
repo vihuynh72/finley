@@ -154,11 +154,11 @@ export function PerformanceChart({ data, label }: { data: { month: string; base:
     <ResponsiveContainer width="100%" height={300}>
       <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
         {grid}
-        <XAxis dataKey="month" tick={{ ...axis, fontSize: 10 }} axisLine={false} tickLine={false} />
+        <XAxis dataKey="month" tick={{ ...axis, fontSize: 10 }} axisLine={false} tickLine={false} interval={3} tickFormatter={(v) => String(v).split(" ")[0]} />
         <YAxis tick={{ ...axis, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => fmtM(v)} width={64} domain={["auto", "auto"]} />
         <Tooltip contentStyle={tipStyle} cursor={{ stroke: "var(--muted-foreground)", strokeDasharray: "4 4" }}
           formatter={(v, n) => [fmtM(Number(v)), n === "scenario" ? `${label}, current scenario` : `${label}, plan`]} />
-        <Area dataKey="scenario" stroke="var(--chart)" strokeWidth={5} fill="var(--chart)" fillOpacity={0.15} isAnimationActive={false}
+        <Area type="linear" dataKey="scenario" stroke="var(--chart)" strokeWidth={2.5} fill="var(--chart)" fillOpacity={0.15} isAnimationActive={false}
           activeDot={{ r: 7, fill: "var(--strong)", stroke: "#fff", strokeWidth: 3 }} dot={false} />
         <Line dataKey="base" stroke="var(--base-line)" strokeWidth={1.5} strokeDasharray="4 4" dot={false} isAnimationActive={false} />
       </ComposedChart>

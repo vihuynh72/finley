@@ -16,12 +16,16 @@ export const financials = (c: Client, d: Delta = { rev: 0, cogs: 0, opex: 0 }): 
   return { rev, cogs, gp, gm: rev ? (gp / rev) * 100 : 0, ebitda, em: rev ? (ebitda / rev) * 100 : 0 };
 };
 
+// Weekly points: monthly seasonality spread over 4 weeks plus a fixed, seeded week-to-week swing
+// (illustrative volatility, the same every render) so the line reads like real performance.
+const noise = (i: number) => { const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return (x - Math.floor(x)) * 2 - 1; };
 export const monthly = (base: Financials, scen: Financials, down: Financials, up: Financials, metric: "rev" | "ebitda") =>
-  MONTHS.map((m, i) => {
-    const w = SEASONALITY[i];
+  MONTHS.flatMap((m, i) => [0, 1, 2, 3].map((k) => {
+    const n = i * 4 + k;
+    const w = (SEASONALITY[i] / 4) * (1 + 0.06 * noise(n) + 0.03 * Math.sin(n / 2.3));
     const lo = Math.min(down[metric], up[metric]) * w, hi = Math.max(down[metric], up[metric]) * w;
-    return { month: m, base: base[metric] * w, scenario: scen[metric] * w, band: [lo, hi] as [number, number] };
-  });
+    return { month: k === 0 ? m : `${m} wk${k + 1}`, base: base[metric] * SEASONALITY[i] / 4, scenario: scen[metric] * w, band: [lo, hi] as [number, number] };
+  }));
 
 /** Sequential per-driver EBITDA steps from base to current values. */
 export const driverSteps = (t: Topic, v: Values) => {
