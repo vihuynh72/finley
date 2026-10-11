@@ -139,7 +139,7 @@ function Overview() {
               {PERIODS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
           </label>
-          <button className="flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_8px_20px_rgba(211,239,99,0.35)] disabled:cursor-not-allowed"
+          <button className="flex items-center gap-2 rounded-full bg-[#4CAF50] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(76,175,80,0.35)] hover:bg-[#43A047] disabled:cursor-not-allowed disabled:opacity-100"
             onClick={app.scan} disabled={app.scanning || !!client.evalCase} title={client.evalCase ? "Backtest clients are frozen at their cutoff; run them from Evals" : undefined}>
             {app.scanning ? <><Loader2 size={14} className="animate-spin" /> {app.scanStage || "Scanning"}…</> : "Scan sources now"}
           </button>
