@@ -89,7 +89,9 @@ export function SawPanel({ saw, cutoff }: { saw: Saw; cutoff: string }) {
               )}
             </div>
           )}
-          {!!b?.advice?.length && <AdvicePanel briefing={{ as_of: `${cutoff}T12:00:00Z`, company: { advice: b.advice, outlook: null } }} />}
+          {/* AdvicePanel prints as_of in the viewer's time zone; local noon (no "Z") keeps it on the cutoff day
+              everywhere (noon UTC reads "Jan 1, 2023" from UTC+12 and later, which looks like hindsight). */}
+          {!!b?.advice?.length && <AdvicePanel briefing={{ as_of: `${cutoff}T12:00:00`, company: { advice: b.advice, outlook: null } }} />}
 
           <div className="space-y-3">
             <p className={H}>Findings from the scan ({saw.findings.length})</p>

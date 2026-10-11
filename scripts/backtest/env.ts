@@ -35,6 +35,7 @@ export interface EnvReport {
   from_environment: string[]; // names already set in the environment, which .env did not override
   missing: string[]; // required names with no value anywhere
   removed: string[]; // SDK overrides removed from the environment
+  ignored: string[]; // names in .env the runner does not use, e.g. BASE44_API_KEY (left untouched)
 }
 
 export function loadEnv(file: string): EnvReport {
@@ -47,10 +48,14 @@ export function loadEnv(file: string): EnvReport {
     found = false;
   }
   const values = parseEnvFile(text);
-  const report: EnvReport = { file, file_found: found, from_env_file: [], from_environment: [], missing: [], removed: [] };
+  const report: EnvReport = { file, file_found: found, from_env_file: [], from_environment: [], missing: [], removed: [], ignored: [] };
   const sdk = new Set<string>(SDK_OVERRIDES);
+  // Only the runner's own names are read or set: the npm scripts grant env access to those alone,
+  // so touching any other name (BASE44_API_KEY, a typo) would stop the run with a permission error.
+  const known = new Set<string>([...REQUIRED, ...OPTIONAL]);
   for (const [name, value] of values) {
     if (!value || sdk.has(name)) continue;
+    if (!known.has(name)) { report.ignored.push(name); continue; }
     if ((Deno.env.get(name) ?? "").trim()) report.from_environment.push(name);
     else {
       Deno.env.set(name, value);

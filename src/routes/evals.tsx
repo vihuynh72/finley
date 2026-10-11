@@ -106,6 +106,7 @@ function Evals() {
             News{view?.kind === "published" ? " in the published run" : ""}: {corpus.kept} of {corpus.fetched} results kept ({corpus.unique_kept} unique stories) from {corpus.searches} searches × {corpus.windows} date windows.
             Left out: {corpus.excluded?.after_cutoff ?? 0} dated after the cutoff, {corpus.excluded?.undated ?? 0} undated, {corpus.excluded?.before_lookback ?? 0} too old.
             {corpus.flagged ? ` ${corpus.flagged} kept but flagged for naming later years.` : ""}
+            {corpus.failed_pair_count ? ` ${corpus.failed_pair_count} of ${corpus.searches * corpus.windows} search windows failed at Bright Data and are missing${corpus.failed_searches?.length ? ` (${corpus.failed_searches.length} searches returned nothing in any window)` : ""}.` : ""}
           </p>
         )}
         {view?.kind === "published" && (

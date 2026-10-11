@@ -132,13 +132,15 @@ async function settle(x: Ctx, field: string, have: Rec, jobs: [string, () => Pro
 }
 
 async function forecast(x: Ctx): Promise<Rec> {
-  const ev = x.ev, model = secret("EVAL_MODEL");
-  const missing = (["news", "no_news"] as const).filter((k) => !ev.forecasts?.[k]);
+  const ev = x.ev, model = secret("EVAL_MODEL"), m = model || MODEL;
+  // Each forecast records its model. A kept one made by another model (EVAL_MODEL changed before a
+  // retry) is redone, so the news and no-news conditions always differ only in their evidence.
+  const missing = (["news", "no_news"] as const).filter((k) => !ev.forecasts?.[k] || (ev.forecasts[k].model ?? m) !== m);
   const briefing = missing.includes("news") && ev.briefing_id ? await x.base44.entities.Briefing.get(ev.briefing_id).catch(() => null) : null;
   const evidence = missing.includes("news") ? newsEvidence(briefing, await runFindings(x)) : "";
   const opts = { deadline: x.startedAt + BUDGET_MS - 10_000, usage: x.usage, ...(model ? { model } : {}) };
-  const forecasts = await settle(x, "forecasts", { ...(ev.forecasts || {}) }, missing.map((k) => [k, () => runForecast(x.c, k, evidence, opts)]));
-  return { stage: "score", forecasts, model: model || MODEL };
+  const forecasts = await settle(x, "forecasts", { ...(ev.forecasts || {}) }, missing.map((k) => [k, () => runForecast(x.c, k, evidence, opts).then((f) => ({ ...f, model: m }))]));
+  return { stage: "score", forecasts, model: m };
 }
 
 // A finding as the Evals page shows it: dated, tied to an assumption, with its best source.
@@ -153,14 +155,17 @@ function scored(f: Rec): ScoredFinding {
 }
 
 async function score(x: Ctx): Promise<Rec> {
-  const ev = x.ev, c = x.c, model = secret("EVAL_JUDGE_MODEL");
+  const ev = x.ev, c = x.c, model = secret("EVAL_JUDGE_MODEL"), m = model || MODEL;
   const findings = await runFindings(x);
   const opts = { deadline: x.startedAt + BUDGET_MS - 10_000, usage: x.usage, ...(model ? { model } : {}) };
-  const have = { ...(ev.judgments || {}) };
+  // judgments._models records which model made each judgment; one made by another model is redone.
+  const have: Rec = { ...(ev.judgments || {}), _models: { ...(ev.judgments?._models || {}) } };
+  const need = (k: string) => !have[k] || (have._models[k] ?? m) !== m;
   const jobs: [string, () => Promise<unknown>][] = [];
-  if (!have.recs_news) jobs.push(["recs_news", () => judgeRecommendations(c, ev.forecasts?.news, { ...opts, label: "news" })]);
-  if (!have.recs_no_news) jobs.push(["recs_no_news", () => judgeRecommendations(c, ev.forecasts?.no_news, { ...opts, label: "no-news" })]);
-  if (!have.findings) jobs.push(["findings", () => judgeFindings(c, findings, opts)]);
+  const job = (k: string, run: () => Promise<unknown>) => { if (need(k)) jobs.push([k, () => run().then((r) => { have._models[k] = m; return r; })]); };
+  job("recs_news", () => judgeRecommendations(c, ev.forecasts?.news, { ...opts, label: "news" }));
+  job("recs_no_news", () => judgeRecommendations(c, ev.forecasts?.no_news, { ...opts, label: "no-news" }));
+  job("findings", () => judgeFindings(c, findings, opts));
   const j = await settle(x, "judgments", have, jobs);
   const news = scoreCondition(c, ev.forecasts.news as Forecast, j.recs_news as RecMatch[]);
   const noNews = scoreCondition(c, ev.forecasts.no_news as Forecast, j.recs_no_news as RecMatch[]);
@@ -170,7 +175,7 @@ async function score(x: Ctx): Promise<Rec> {
     corpus: ev.corpus_stats ?? {}, caveats: c.caveats,
     unchecked_answers: [...c.quarters, ...c.kpis, ...c.questions, ...c.actions].filter((a) => a.check).length,
   };
-  return { stage: "done", judgments: j, summary, judge_model: model || MODEL, finished_at: new Date().toISOString() };
+  return { stage: "done", judgments: j, summary, judge_model: m, finished_at: new Date().toISOString() };
 }
 
 const STAGES: Record<string, (x: Ctx) => Promise<Rec>> = { plan, collect, analyze, forecast, score };

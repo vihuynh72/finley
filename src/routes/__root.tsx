@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-router";
 
 import { Loader2 } from "lucide-react";
+import { publishedCases } from "@/lib/published";
 import { AppProvider, useApp } from "@/lib/store";
 import { AppShell } from "@/components/AppShell";
 
@@ -84,6 +85,9 @@ function ShellGate() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const app = useApp();
   if (path === "/" || path === "/login") return <Outlet />;
+  // A published backtest is a static file of this build: /evals shows it signed in or not, without
+  // waiting for Base44, and still when Base44 is slow or down (src/evals/published/README.md).
+  if (path === "/evals" && publishedCases().length) return <AppShell><Outlet /></AppShell>;
   if (!app.authChecked) return <Loading label="Signing in…" />;
   // Browsing works signed out when the Base44 app allows it; a refused read means sign in first.
   if (app.needsSignIn) return <Navigate to="/login" />;

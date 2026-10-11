@@ -137,6 +137,24 @@ function corpusLine(ev: Rec): string {
 
 // ---------- main ----------
 
+function acquireLock(statePath: string) {
+  const lockPath = `${statePath}.lock`;
+  Deno.mkdirSync(STATE_DIR, { recursive: true });
+  try {
+    Deno.openSync(lockPath, { write: true, createNew: true }).close();
+  } catch (e) {
+    if (e instanceof Deno.errors.AlreadyExists) {
+      fail(`Another runner is using ${rel(statePath)} (${rel(lockPath)} exists). If none is running (it was killed), delete that file and try again.`, 1);
+    }
+    throw e;
+  }
+  const release = () => { try { Deno.removeSync(lockPath); } catch { /* already gone */ } };
+  addEventListener("unload", release); // also runs on Deno.exit()
+  try {
+    Deno.addSignalListener("SIGINT", () => { release(); Deno.exit(130); });
+  } catch { /* signals unsupported on this platform */ }
+}
+
 async function main() {
   // Base44 runs in UTC, and shared/dates.ts reads Google's "Jan 1, 2023" in the local time zone: east of
   // UTC, a story from the day after the cutoff would land on the cutoff day and leak into the backtest.
@@ -154,6 +172,10 @@ async function main() {
       ? `Refusing --out ${args.out}: a dry run fakes Claude and Bright Data, so it must never land in src/evals/published.`
       : `A dry run writes only ${rel(outPath)}; --out is for real runs.`);
   }
+
+  // One runner per state file: the EvalRun lease lives in this process's memory, so it can't stop a
+  // second process from running (and paying for) the same stages and overwriting the checkpoint.
+  acquireLock(statePath);
 
   // Keys first: nothing is created or spent without them.
   let fakes: ReturnType<typeof installFakes> | null = null;
@@ -176,6 +198,7 @@ async function main() {
     const set = [...REQUIRED, ...OPTIONAL].map((k) => `${k} (${env.from_env_file.includes(k) ? ".env" : env.from_environment.includes(k) ? "environment" : "not set"})`);
     console.log(`REAL RUN: Claude and Bright Data will be called and billed. Keys: ${set.join(", ")}.`);
     if (env.removed.length) console.log(`Removed ${env.removed.join(", ")} from this process's environment so the SDK talks to api.anthropic.com.`);
+    if (env.ignored.length) console.log(`Ignoring ${env.ignored.join(", ")} in .env (not used by the backtest).`);
   }
 
   // State: a real run never silently discards or reuses earlier work.
@@ -195,10 +218,12 @@ async function main() {
   const schemas = loadSchemas(`${ROOT}/base44/entities`);
   const checker = schemaChecker(schemas);
   let lastSave = Date.now(), dirty = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   const runner: Runner = args.resume && kept ? kept.runner
     : { case_key: c.key, dry_run: args.dry, eval_run_id: null, created_at: new Date().toISOString(), steps: 0 };
   let store: MemoryBase44;
   const checkpoint = () => {
+    if (timer) { clearTimeout(timer); timer = undefined; }
     writeAtomic(statePath, JSON.stringify({ format: 1, runner, store: store.toJSON() } satisfies SavedState));
     lastSave = Date.now();
     dirty = false;
@@ -207,12 +232,21 @@ async function main() {
     onWrite: (entity: string, op: WriteOp, data: Rec) => {
       checker.check(entity, op, data);
       dirty = true;
-      // Base44 keeps every write as it happens; a crash mid-step loses at most a few seconds here.
-      if (Date.now() - lastSave > CHECKPOINT_EVERY_MS) queueMicrotask(() => dirty && checkpoint());
+      // Base44 keeps every write as it happens; a crash mid-step loses at most a few seconds here. A timer,
+      // not a microtask: it fires only after the current chain of store calls, so news rows are never
+      // saved without the collected_pairs update that marks their searches done.
+      if (!timer) timer = setTimeout(() => { timer = undefined; if (dirty) checkpoint(); }, Math.max(0, CHECKPOINT_EVERY_MS - (Date.now() - lastSave)));
     },
   };
   store = kept ? MemoryBase44.fromJSON(kept.store, opts) : new MemoryBase44(opts);
   if (args.fresh && saved) console.log(`Discarded ${rel(statePath)}.`);
+  if (args.newRun) {
+    // A new run reuses only a complete collection (collect() looks for corpus_complete). An unfinished
+    // one would be fetched again next to its own partial rows and counted twice.
+    const evs = store.table("EvalRun").filter((r) => r.case_key === c.key && r.corpus_key);
+    const unfinished = evs.find((r) => !r.corpus_complete && !evs.some((d) => d.corpus_key === r.corpus_key && d.corpus_complete));
+    if (unfinished) fail(`EvalRun ${unfinished.id} in ${rel(statePath)} never finished collecting news. Use --resume to finish it, or --fresh to start over.`);
+  }
 
   const E = store.entities;
   if (args.resume && !runner.eval_run_id) {
@@ -327,6 +361,8 @@ function printSummary(p: Rec, c: Rec, findingsSaved: number, warnings: string[])
   console.log(`  Model calls: ${u.calls}; tokens in ${fmt(u.input_tokens)} / out ${fmt(u.output_tokens)} / thinking ${fmt(u.thinking_tokens)}; model time ${(u.ms / 1000).toFixed(1)}s`);
   console.log(`  Models: forecaster ${p.run.model}, judges ${p.run.judge_model}, pipeline ${p.run.pipeline_models.join(", ") || "n/a"}`);
   console.log(`  Sources published: ${p.sources.length} kept news items, all dated on or before ${p.run.cutoff}; ${s.unchecked_answers} answer-key items still marked check`);
+  const cp = s.corpus || {};
+  if (cp.failed_pair_count) console.log(`  WARNING: ${cp.failed_pair_count} of ${cp.searches * cp.windows} search windows failed at Bright Data; their news is missing (the Evals page says so).`);
   if (p.run.errors.length) console.log(`  Non-fatal problems recorded: ${p.run.errors.length} (first: ${p.run.errors[0]})`);
   if (warnings.length) console.log(`  Schema warnings: ${warnings.length} (see [schema] lines above)`);
   console.log("=".repeat(64));

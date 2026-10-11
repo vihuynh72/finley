@@ -11,11 +11,16 @@ export function RangeChart({ rows, label = "Predicted range vs actual revenue by
   const W = 760, HH = 280, pad = { l: 52, r: 16, t: 16, b: 40 };
   const y = (v: number) => pad.t + (1 - (v - min) / (max - min || 1)) * (HH - pad.t - pad.b);
   const step = (W - pad.l - pad.r) / rows.length;
-  const ticks = Array.from({ length: 5 }, (_, i) => min + ((max - min) * i) / 4);
+  // Gridlines at round values, labelled exactly (quarters of the span put "$8.3B" on 8.25).
+  const span = max - min || 1;
+  const tickStep = [0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 25, 50].find((s) => span / s <= 6) ?? span / 4;
+  const digits = Math.round(tickStep * 100) % 10 ? 2 : 1;
+  const ticks: number[] = [];
+  for (let t = Math.ceil(min / tickStep - 1e-9) * tickStep; t <= max + 1e-9; t += tickStep) ticks.push(Number(t.toFixed(4)));
   return (
     <svg viewBox={`0 0 ${W} ${HH}`} className="w-full" role="img" aria-label={label}>
       {ticks.map((t) => (
-        <g key={t}><line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} stroke="var(--border)" /><text x={pad.l - 8} y={y(t) + 4} textAnchor="end" fontSize={10} fill="var(--muted-foreground)">${t.toFixed(1)}B</text></g>
+        <g key={t}><line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} stroke="var(--border)" /><text x={pad.l - 8} y={y(t) + 4} textAnchor="end" fontSize={10} fill="var(--muted-foreground)">${t.toFixed(digits)}B</text></g>
       ))}
       {rows.map((r, i) => {
         const cx = pad.l + step * i + step / 2;

@@ -54,8 +54,9 @@ Deno.test("buildPublished counts every model call, the analyze stage's included,
   assert.deepEqual(p.run.usage, { calls: 5, input_tokens: 3600, output_tokens: 360, thinking_tokens: 36, ms: 36000 });
   assert.deepEqual(p.run.pipeline_models, ["m-plan", "m-pipe"]); // eval/ agents are the forecaster and judges, not the pipeline
   assert.equal(p.run.model, "m-forecast");
-  assert.equal(p.run.judge_model, "m-forecast"); // older runs recorded no judge model: same as the forecaster
-  assert.equal(build({ ev: finished({ judge_model: "m-judge" }) }).run.judge_model, "m-judge");
+  assert.equal(p.run.judge_model, "m-judge"); // older runs recorded no judge model: taken from the judges' own usage, never the forecaster's
+  assert.equal(build({ ev: finished({ judge_model: "m-judge-recorded" }) }).run.judge_model, "m-judge-recorded");
+  assert.equal(build({ ev: finished({ usage: [] }), briefing: null }).run.judge_model, ""); // unknown: shown as not recorded
   assert.deepEqual(p.run.errors, ["analyze: one agent failed"]);
   assert.equal(build({ briefing: null }).run.usage.calls, 3);
 });
@@ -84,6 +85,14 @@ Deno.test("a dry run is marked as one and checkPublished refuses it", () => {
   const dry = build({ dryRun: true });
   assert.equal(dry.dry_run, true);
   assert.deepEqual(checkPublished(dry, "netflix-2023"), ["dry run: fake services, not results"]);
+});
+
+Deno.test("checkPublished refuses news and no-news forecasts made by different models", () => {
+  const p = build({ sources: [src("u1", "2022-12-01")] });
+  const mixed = { ...p, forecasts: { news: { ...p.forecasts.news, model: "m-b" }, no_news: { ...p.forecasts.no_news, model: "m-a" } } };
+  assert.deepEqual(checkPublished(mixed, "netflix-2023"), ["the news and no-news forecasts used different models (m-b vs m-a)"]);
+  const same = { ...p, forecasts: { news: { ...p.forecasts.news, model: "m-a" }, no_news: { ...p.forecasts.no_news, model: "m-a" } } };
+  assert.deepEqual(checkPublished(same, "netflix-2023"), []);
 });
 
 Deno.test("checkPublished refuses a wrong case, missing results, a missing cutoff and late or undated news", () => {

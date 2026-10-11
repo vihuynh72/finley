@@ -64,7 +64,9 @@ export function buildPublished(x: {
     format: PUBLISHED_FORMAT, case_key: ev.case_key, dry_run: !!x.dryRun, published_at: x.now ?? new Date().toISOString(), origin: x.origin,
     run: {
       eval_run_id: String(ev.id), cutoff, finished_at: ev.finished_at || ev.updated_date || "",
-      model: ev.model || "", judge_model: ev.judge_model || ev.model || "",
+      // Runs from before judge_model was recorded: the judges' own usage says which model they ran on
+      // (never ev.model, which is the forecaster's).
+      model: ev.model || "", judge_model: ev.judge_model || [...new Set(usage.filter((u) => /^eval\/judge/.test(String(u.agent))).map((u) => String(u.model || "")).filter(Boolean))].join(", ") || "",
       pipeline_models: [...new Set(usage.filter((u) => !/^eval\//.test(String(u.agent))).map((u) => String(u.model || "")).filter(Boolean))],
       usage: totals(usage), errors: (ev.errors || []).map(String),
     },
@@ -94,6 +96,8 @@ export function checkPublished(p: Rec, caseKey?: string): string[] {
   if (p.dry_run) out.push("dry run: fake services, not results");
   if (!p.summary?.news?.quarters?.rows?.length) out.push("no scored quarters");
   if (!p.summary?.no_news) out.push("no no-news condition");
+  const fm = [p.forecasts?.news?.model, p.forecasts?.no_news?.model];
+  if (fm[0] && fm[1] && fm[0] !== fm[1]) out.push(`the news and no-news forecasts used different models (${fm[0]} vs ${fm[1]})`);
   const cutoff = p.run?.cutoff || p.summary?.cutoff;
   // Without a cutoff, the date check below compares against undefined and passes every dated source.
   if (!cutoff) out.push("no cutoff date");
