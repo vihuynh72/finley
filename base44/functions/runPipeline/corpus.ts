@@ -86,9 +86,10 @@ export function renderArticles(corpus: Corpus, own: Lens[]): string {
   let size = 0, omitted = 0;
   for (const a of [...stories.filter((s) => own.includes(s.lens)), ...stories.filter((s) => !own.includes(s.lens))]) {
     const yours = own.includes(a.lens);
+    const hit = a.mentions_client ? ' mentions_client="true"' : "";
     const also = copies.has(a.id) ? ` also_ran_it="${copies.get(a.id)!.join(", ")}"` : "";
     const body = yours ? `\n${a.snippet || "(headline only, no snippet)"}` : "";
-    const block = `<article id="${a.id}" yours="${yours}" lens="${a.lens}" date="${a.date || "unknown"}" outlet="${a.source}"${also}>\n${a.title}${body}\n</article>`;
+    const block = `<article id="${a.id}" yours="${yours}" lens="${a.lens}" date="${a.date || "unknown"}" outlet="${a.source}"${hit}${also}>\n${a.title}${body}\n</article>`;
     if (size + block.length > MAX_CHARS) { omitted++; continue; }
     blocks.push(block); size += block.length;
   }

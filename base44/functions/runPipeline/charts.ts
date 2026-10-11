@@ -3,32 +3,40 @@ import type { Quantified } from "./impacts.ts";
 import { UI_TOPICS } from "./research.ts";
 
 // Deterministic numbers for the Briefing, from the same maths as the dashboard: plan / downside / central
-// / upside cases built from the quantified findings this run saved, and chart-ready series.
+// / upside cases built from this scan's quantified impacts, and chart-ready series.
 
 const at = (client: Record<string, any>, c: Quantified, shock: number) =>
   leversFor(client, { pnl_line: c.pnl_line, shock_pct: shock, exposure_pct: c.exposure_pct, pass_through_pct: c.pass_through_pct });
 const rounded = (l: Levers): Levers => ({ price_change_pct: r2(l.price_change_pct), volume_change_pct: r2(l.volume_change_pct),
   cogs_change_pct: r2(l.cogs_change_pct), opex_change_pct: r2(l.opex_change_pct), multiple_change: r2(l.multiple_change) });
 
-// Downside and upside add up every quantified finding at its worst or best plausible shock; the central
-// case counts only findings at least 30% likely (likelihood 3+), at their central size. Run-rate view:
-// as if the effects persisted for a year, with EV at the constant multiple.
-export function buildScenarios(client: Record<string, any>, used: Quantified[], snapshot: any, stories: Record<string, any> | null) {
-  if (!hasFinancials(client) || !used.length) return null;
-  const options = used.map((c) => [c.shock_min_pct, c.shock_pct, c.shock_max_pct].map((s) => at(client, c, Number(s) || 0)));
-  const ebitda = (l: Levers) => simulate(client, l).ebitda;
-  const pick = (better: boolean) => options.map((o) => o.reduce((a, b) => ((better ? ebitda(b) > ebitda(a) : ebitda(b) < ebitda(a)) ? b : a)));
+// Downside and upside add up every quantified impact at its worst or best plausible shock; the central
+// case counts only impacts at least 30% likely (likelihood 3+), at their central size. These are the
+// impacts the scenario agent wrote its stories from. Run-rate view: as if the effects persisted for a
+// year, with EV at the constant multiple.
+export function buildScenarios(client: Record<string, any>, quantified: Quantified[], snapshot: any, stories: Record<string, any> | null) {
+  if (!hasFinancials(client) || !quantified.length) return null;
+  const valued = client.ev_ebitda_multiple > 0, priced = valued && snapshot?.close > 0;
+  // Unparseable bounds drop out rather than read as 0, which would fake a no-change best case.
+  const options = quantified.map((c) => [c.shock_min_pct, c.shock_pct, c.shock_max_pct].map(Number).filter(Number.isFinite).map((s) => at(client, c, s)));
+  // Worse or better by EV, which carries both EBITDA and multiple effects; EBITDA breaks ties (no multiple).
+  const value = (l: Levers) => { const p = simulate(client, l); return [p.ev, p.ebitda]; };
+  const above = (a: Levers, b: Levers) => { const [ea, ba] = value(a), [eb, bb] = value(b); return ea !== eb ? ea > eb : ba > bb; };
+  const pick = (up: boolean) => options.map((o) => o.reduce((a, b) => ((up ? above(b, a) : above(a, b)) ? b : a)));
   const make = (id: string, label: string, levers: Levers, story: string) => {
     const e = effectOf(client, levers);
     return { id, label, story: story || "", levers: rounded(levers), revenue: r2(e.scenario.revenue), ebitda: r2(e.scenario.ebitda),
-      ebitda_margin_pct: r1(e.scenario.ebitda_margin_pct), ev: r2(e.scenario.ev), ebitda_delta: e.ebitda_delta, ev_delta: e.ev_persistent, ev_pct: e.ev_persistent_pct,
-      implied_share_price: snapshot?.close > 0 ? impliedPrice(snapshot.close, e.ev_persistent_pct) : null };
+      ebitda_margin_pct: r1(e.scenario.ebitda_margin_pct), ebitda_delta: e.ebitda_delta,
+      ev: valued ? r2(e.scenario.ev) : null, ev_delta: valued ? e.ev_persistent : null, ev_pct: valued ? e.ev_persistent_pct : null,
+      implied_share_price: priced ? impliedPrice(snapshot.close, e.ev_persistent_pct) : null };
   };
+  const central = quantified.filter((c) => c.likelihood >= 3).map((c) => at(client, c, Number(c.shock_pct)));
   return {
-    basis: "Illustrative scenarios, not forecasts: downside and upside add up this scan's quantified findings at their worst or best plausible size; central counts only those at least 30% likely, at their central size. All as if they persisted for a year, with EV at the constant multiple" +
-      (snapshot?.close > 0 ? ` and the share price scaled from the ${snapshot.close_date} close assuming net debt is small.` : "."),
+    basis: "Illustrative scenarios, not forecasts: downside and upside add up this scan's quantified impacts at their worst or best plausible size; central counts only those at least 30% likely, at their central size. All as if they persisted for a year" +
+      (valued ? ", with EV at the constant multiple" : "; no EV/EBITDA multiple entered, so no enterprise value") +
+      (priced ? ` and the share price scaled from the ${snapshot.close_date} close assuming net debt is small.` : "."),
     cases: [make("plan", "Plan (no change)", NO_CHANGE, ""), make("downside", "Downside", addLevers(pick(false)), stories?.downside),
-      make("central", "Central", addLevers(options.filter((_, i) => used[i].likelihood >= 3).map((o) => o[1])), stories?.central), make("upside", "Upside", addLevers(pick(true)), stories?.upside)],
+      make("central", "Central", addLevers(central), stories?.central), make("upside", "Upside", addLevers(pick(true)), stories?.upside)],
     signposts: stories?.signposts ?? [],
   };
 }

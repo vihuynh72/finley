@@ -69,7 +69,7 @@ export async function profileFingerprint(client: Record<string, any>): Promise<s
 }
 
 const canon = (value: string, allowed: readonly string[], fallback: string) =>
-  allowed.find((a) => a === (value || "").trim().toLowerCase()) ?? fallback;
+  allowed.find((a) => a === (value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_")) ?? fallback;
 
 // Turns a model-written keyword into a clean search query, or "" if it's unusable.
 export function cleanKeyword(raw: string): string {

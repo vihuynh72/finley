@@ -12,17 +12,31 @@ export default function RunPanel({ clientId, onDone }) {
   useEffect(() => {
     if (!active) return;
     const t = setInterval(async () => {
-      const r = await base44.entities.Run.get(run.id);
-      setRun(r);
-      if (r.stage === "done") onDone();
+      try {
+        const r = await base44.entities.Run.get(run.id);
+        if (!["done", "failed"].includes(r.stage) && Date.now() - Date.parse(r.created_date || "") > 8 * 60_000) {
+          setRun({ ...r, stage: "failed", error: "Timed out waiting for the run to finish." });
+          return clearInterval(t);
+        }
+        setRun(r);
+        if (r.stage === "done") onDone();
+        if (r.stage === "failed") clearInterval(t);
+      } catch {
+        /* keep polling */
+      }
     }, 2500);
     return () => clearInterval(t);
   }, [active, run?.id]);
 
   const start = async () => {
+    if (active) return;
     const r = await base44.entities.Run.create({ client_id: clientId, stage: "queued" });
     setRun(r);
-    base44.functions.invoke("runPipeline", { run_id: r.id }).catch(() => {});
+    base44.functions.invoke("runPipeline", { run_id: r.id }).catch((e) => {
+      const msg = `Could not start the pipeline: ${e?.message || e}`;
+      base44.entities.Run.update(r.id, { stage: "failed", error: msg }).catch(() => {});
+      setRun({ ...r, stage: "failed", error: msg });
+    });
   };
   const idx = run ? STAGES.findIndex(([s]) => s === run.stage) : -1;
 

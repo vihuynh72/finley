@@ -9,7 +9,7 @@ import type { LeadOutput } from "./lead.ts";
 export interface BriefingParts {
   client: Record<string, any>; run_id: string; startedAt: number; corpus: Corpus; research: CheckedResearch;
   market: { snapshot: any; note: string }; picture: Record<string, any> | null; thesis: { ledger: any[]; profile_checks: any[] };
-  lead: LeadOutput | null; assumptions: Record<string, any>[]; saved: Record<string, any>[]; ongoing: Record<string, any>[]; dropped: string[];
+  lead: LeadOutput | null; assumptions: Record<string, any>[]; advice: Record<string, any>[]; saved: Record<string, any>[]; ongoing: Record<string, any>[]; dropped: string[];
   scenarios: Record<string, any> | null; questions: Record<string, any>[]; charts: Record<string, any>; alert_email: Record<string, any>;
   usage: AgentUsage[]; errors: string[];
 }
@@ -23,10 +23,11 @@ export function buildBriefing(x: BriefingParts) {
     status: x.errors.length ? "partial" : "complete",
     headline: x.picture?.headline ?? "", summary: x.lead?.outlook?.summary ?? "",
     market_data: x.market.snapshot ?? { note: x.market.note },
-    market: x.picture ? { overview: x.picture.overview, themes: x.picture.themes, conflicts: x.picture.conflicts, players: (x.picture.players || []).slice(0, 12),
-      watch: x.picture.watch, timeline: (x.picture.timeline || []).slice(-30) } : {},
+    market: { ...(x.picture ? { overview: x.picture.overview, themes: x.picture.themes, conflicts: x.picture.conflicts, players: (x.picture.players || []).slice(0, 12),
+      watch: x.picture.watch, timeline: (x.picture.timeline || []).slice(-30) } : {}), indicators: x.research.indicators.slice(0, 12) },
     company: {
       outlook: x.lead?.outlook ?? null, watchlist: (x.lead?.watchlist ?? []).slice(0, 5), profile_checks: (x.thesis.profile_checks || []).slice(0, 6),
+      advice: (x.advice || []).slice(0, 4),
       assumptions: x.assumptions.map((a, i) => ({ index: i, text: a.text, driver: a.driver, status: a.status || "monitoring", note: a.note || "",
         counterpoint: (ledger.get(i) as any)?.strongest_counterpoint ?? "", signpost: (ledger.get(i) as any)?.signpost ?? "" })),
     },
@@ -35,7 +36,7 @@ export function buildBriefing(x: BriefingParts) {
     ongoing: x.ongoing, scenarios: x.scenarios ?? {}, questions: x.questions, charts: x.charts,
     coverage: {
       articles: x.corpus.articles.length, stories: stories.length, by_lens: byLens, headline_only: stories.filter((a) => !a.snippet).length,
-      failed_searches: x.corpus.failed_queries, name_collisions: x.research.dispositions.filter((d) => d.status === "name_collision").length,
+      failed_searches: x.corpus.failed_queries, name_collisions: x.research.name_collisions.length,
       blind_spots: x.research.gaps.slice(0, 9), dropped: [...x.research.dropped, ...x.dropped].slice(0, 20), note: coverageNote(x.corpus),
     },
     alert_email: x.alert_email,
