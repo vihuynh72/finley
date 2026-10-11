@@ -92,7 +92,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="text-xs font-medium uppercase tracking-[0.6px] text-muted-foreground">Client</span>
             <select value={app.clientId} onChange={(e) => app.setClientId(e.target.value)}
               className="rounded-lg border bg-card px-3 py-1.5 text-sm font-semibold text-foreground">
-              {app.clients.map((c) => <option key={c.id} value={c.id}>{c.name}{c.evalCase ? " (backtest)" : ""}</option>)}
+              {app.clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
           <div className="flex items-center gap-4">
