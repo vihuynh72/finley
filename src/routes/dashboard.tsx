@@ -169,10 +169,10 @@ function Overview() {
       <div className="grid grid-cols-[322px_minmax(0,1fr)] gap-4">
         <div className={cn(card, "flex flex-col items-center px-6 pb-6 pt-6")}>
           <div className="relative">
-            <span className="grid h-24 w-24 place-items-center rounded-full border-[3px] border-primary p-1">
-              <span className="grid h-full w-full place-items-center rounded-full bg-tint text-2xl font-semibold">{initials(String(app.user?.["full_name"] || app.user?.["email"] || "?"))}</span>
+            <span className="grid h-24 w-24 place-items-center rounded-full bg-primary text-3xl font-semibold text-primary-foreground ring-4 ring-tint ring-offset-2 ring-offset-card">
+              {initials(String(app.user?.["full_name"] || app.user?.["email"] || "?"))}
             </span>
-            <span className="absolute right-0 top-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground shadow-[0_0_0_4px_var(--card)]">FP&A</span>
+            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full border-2 border-card bg-foreground px-2 py-0.5 text-[10px] font-bold text-background">FP&A</span>
           </div>
           <p className="pt-4 text-xl font-medium">Hello {firstName}</p>
           <p className="text-sm text-muted-foreground">{app.clients.length} client{app.clients.length === 1 ? "" : "s"} under watch</p>
@@ -207,12 +207,15 @@ function Overview() {
           </div>
           <div className="mt-6 w-full space-y-3">
             <p className="text-[11px] font-bold uppercase tracking-[0.55px] text-muted-foreground">Other clients</p>
-            <div className="flex pl-2">
+            <div className="flex flex-wrap gap-2">
               {others.slice(0, 3).map((c) => (
                 <button key={c.id} title={c.name} onClick={() => app.setClientId(c.id)}
-                  className="-ml-2 grid h-8 w-8 place-items-center rounded-full border-2 border-popover bg-tint text-[10px] font-bold">{initials(c.name)}</button>
+                  className="flex items-center gap-2 rounded-full border bg-popover py-1 pl-1 pr-3 text-xs font-medium hover:border-foreground">
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{initials(c.name)}</span>
+                  {c.name}
+                </button>
               ))}
-              {others.length > 3 && <span className="-ml-2 grid h-8 w-8 place-items-center rounded-full border-2 border-popover bg-primary text-[10px] font-bold text-primary-foreground">+{others.length - 3}</span>}
+              {others.length > 3 && <span className="grid h-8 place-items-center rounded-full bg-muted px-3 text-xs font-bold">+{others.length - 3}</span>}
               {!others.length && <Link to="/clients/new" className="text-xs text-subtle hover:text-foreground">Add a client</Link>}
             </div>
           </div>
