@@ -91,6 +91,10 @@ export function BridgeChart({ start, steps, startLabel = "Base EBITDA", endLabel
     run += s.value;
   }
   rows.push({ name: endLabel, inv: 0, val: run, kind: "total", raw: run });
+  // Zoom the axis to the range the bridge moves through, so small steps stay visible.
+  const levels = rows.flatMap((r) => (r.kind === "total" ? [r.raw] : [r.inv, r.inv + r.val]));
+  const lo = Math.min(...levels), hi = Math.max(...levels);
+  const floor = Math.max(0, lo - (hi - lo || Math.abs(hi) * 0.1) * 0.6);
   const tiny = Math.max(Math.abs(start), 1) * 0.001;
   const color = (r: { kind: string; raw: number }) => (r.kind === "total" ? palette.total : Math.abs(r.raw) < tiny ? palette.zero : r.kind === "up" ? palette.up : palette.down);
   return (
@@ -99,7 +103,7 @@ export function BridgeChart({ start, steps, startLabel = "Base EBITDA", endLabel
         {grid}
         <XAxis dataKey="name" interval={0} axisLine={false} tickLine={false} height={rows.length > 6 ? 64 : 58}
           tick={rows.length > 6 ? <RotatedTick /> : <MultiTick maxChars={rows.length > 4 ? 12 : 16} maxLines={3} />} />
-        <YAxis tick={axis} axisLine={false} tickLine={false} tickFormatter={(v) => fmtM(v)} width={64} domain={[0, "auto"]} />
+        <YAxis tick={axis} axisLine={false} tickLine={false} tickFormatter={(v) => fmtM(v)} width={64} domain={[floor, "auto"]} allowDataOverflow />
         <Tooltip cursor={{ fill: "var(--muted)" }} contentStyle={tipStyle} itemStyle={{ color: "var(--foreground)" }} labelStyle={{ color: "var(--foreground)" }}
           formatter={(_v, n, p) => (n === "val" ? [p.payload.kind === "total" ? fmtM(p.payload.raw) : fmtM(p.payload.raw, true), "EBITDA"] : [null, null])} />
         <Bar dataKey="inv" stackId="a" fill="transparent" isAnimationActive={anim} />

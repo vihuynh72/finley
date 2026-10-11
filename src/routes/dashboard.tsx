@@ -239,8 +239,8 @@ function Overview() {
         <div className={cn(card, "space-y-6 p-6")}>
           <CardHead title="Combined scenario EBITDA bridge" right={<Link to="/scenarios" aria-label="Prompt scenarios" className="text-muted-foreground hover:text-foreground"><MoreHorizontal size={16} /></Link>} />
           <BridgeChart start={base.ebitda} steps={steps} startLabel="Base" endLabel="Combined" height={300}
-            palette={{ total: "var(--chart)", up: "var(--olive)", down: "var(--strong)", zero: "var(--border)" }} />
-          <Formula>Combined EBITDA = {fmtM(base.ebitda)} {steps.map((s) => `${s.value >= 0 ? "+" : "−"} ${fmtM(Math.abs(s.value))}`).join(" ")} = {fmtM(comb.ebitda)}. Each step is the topic's sliders where you set them, else the implied impact of its open findings.</Formula>
+            palette={{ total: "var(--chart)", up: "var(--olive)", down: "var(--danger)", zero: "var(--border)" }} />
+          <Formula>Combined EBITDA = {fmtM(base.ebitda)} {steps.filter((s) => Math.abs(s.value) > 0.5).map((s) => `${s.value >= 0 ? "+" : "−"} ${fmtM(Math.abs(s.value))}`).join(" ")} = {fmtM(comb.ebitda)}. Each step is the topic's sliders where you set them, else the implied impact of its open findings.</Formula>
         </div>
         <div className={cn(card, "flex flex-col gap-4 p-6")}>
           <CardHead title="Assumption health" right={<span title="Topics whose assumptions are holding or supported by the open findings" className="text-muted-foreground"><MoreHorizontal size={16} /></span>} />
