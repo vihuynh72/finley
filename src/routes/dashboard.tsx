@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BellOff, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Download, Lightbulb, Loader2, MoreHorizontal, Siren, type LucideIcon } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { BellOff, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Download, Lightbulb, Loader2, MoreHorizontal, Siren } from "lucide-react";
+import { useMemo, useState, type ComponentType, type ReactNode } from "react";
+type LucideIcon = ComponentType<{ size?: number }>;
 import { fmtM, topicName, type TopicId } from "@/lib/data";
 import { downloadFindingsCsv } from "@/lib/export";
 import { combinedPreset, ebitdaDelta, financials, findingsDelta, monthly, sumDeltas } from "@/lib/model";
@@ -37,7 +38,6 @@ function Stat({ icon: I, label, value, badge, foot, href }: { icon: LucideIcon; 
       <p className="pt-1 text-sm font-medium text-subtle">{label}</p>
       <div className="flex h-[52px] items-start gap-2">
         <span className="num text-[32px] font-light leading-10 tracking-[-0.64px]">{value}</span>
-        {badge && <span className="mt-[19px] rounded-full bg-strong px-2 py-0.5 text-xs font-semibold text-[#F5F6EF]">{badge}</span>}
       </div>
       <a href={href} className="flex items-center justify-between border-t border-muted pt-4 text-xs font-medium text-subtle hover:text-foreground">
         {foot} <ChevronRight size={12} />
@@ -139,7 +139,7 @@ function Overview() {
               {PERIODS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
           </label>
-          <button className="flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_8px_20px_rgba(211,239,99,0.35)] disabled:opacity-60"
+          <button className="flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_8px_20px_rgba(211,239,99,0.35)] disabled:cursor-not-allowed"
             onClick={app.scan} disabled={app.scanning || !!client.evalCase} title={client.evalCase ? "Backtest clients are frozen at their cutoff; run them from Evals" : undefined}>
             {app.scanning ? <><Loader2 size={14} className="animate-spin" /> {app.scanStage || "Scanning"}…</> : "Scan sources now"}
           </button>
