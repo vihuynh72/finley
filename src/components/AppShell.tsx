@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import {
   BarChart3, Building2, Cpu, Database, FlaskConical, Gavel, Globe, Landmark, LayoutDashboard, Loader2, LogIn, LogOut, Moon, Plus,
-  Radar, ShoppingCart, Sun, Tag, Truck, Users, Wheat, X, type LucideIcon,
+  Radar, ShoppingCart, Sun, Tag, Truck, Users, Wheat, X,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+type LucideIcon = ComponentType<{ size?: number; className?: string }>;
 import { base44 } from "@/api/base44Client";
 import { topicName } from "@/lib/data";
 import { useApp } from "@/lib/store";
@@ -99,12 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               {client?.reforecastDue ? <>Reforecast due {dueLabel(client.reforecastDue)} · </> : null}
               {app.scanning ? `${app.scanStage || "Scanning"}…` : `Last scan ${app.lastScan}`}
             </span>
-            <button className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-[11px] font-bold text-primary-foreground disabled:opacity-70"
-              onClick={app.scan} disabled={app.scanning || !client || !!client.evalCase}
-              title={client?.evalCase ? "Backtest clients are frozen at their cutoff; run them from Evals" : undefined}>
-              {app.scanning ? <><Loader2 size={12} className="animate-spin" /> Scanning…</> : "Scan sources now"}
-            </button>
-            <button className="grid h-8 w-8 place-items-center rounded-full bg-muted text-subtle" aria-label="Toggle dark mode" onClick={() => setDark(!dark)}>
+            <button className="grid h-8 w-8 place-items-center rounded-full border border-border bg-muted text-subtle" aria-label="Toggle dark mode" onClick={() => setDark(!dark)}>
               {dark ? <Sun size={12} /> : <Moon size={12} />}
             </button>
           </div>
