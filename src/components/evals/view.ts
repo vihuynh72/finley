@@ -4,6 +4,7 @@
 // snapshot copies them), so the same data always gives the same numbers, whichever way it arrived.
 // Pure: no React and no Base44 calls, so the Deno tests import it (tests/frontend/published.test.ts).
 
+import { caseCurrency, CURRENCY_SYMBOL, type Currency, EVAL_CASES } from "../../../base44/shared/eval/cases.ts";
 import type { PublishedBacktest, PublishedSource } from "../../../base44/shared/eval/published.ts";
 
 type Rec = Record<string, any>;
@@ -11,7 +12,8 @@ type Rec = Record<string, any>;
 export const pctOf = (n: number, d: number) => (d ? Math.round((n / d) * 100) : 0);
 export const signed = (n: number | null | undefined, digits = 1, unit = "") =>
   (n == null ? "—" : `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(digits)}${unit}`);
-export const usdB = (n: number | null | undefined) => (n == null ? "—" : `$${n.toFixed(2)}B`);
+// Billions of the case's reporting currency, e.g. "$8.16B" or "€4.27B".
+export const moneyB = (n: number | null | undefined, currency: Currency = "USD") => (n == null ? "—" : `${CURRENCY_SYMBOL[currency] ?? "$"}${n.toFixed(2)}B`);
 // "Dec 31, 2022" for a day; "undated" for nothing.
 export const dayLabel = (iso: string | null | undefined) =>
   (iso ? new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "undated");
@@ -46,6 +48,7 @@ export interface Saw {
 export interface BacktestView {
   kind: "published" | "live";
   caseKey: string; company: string; cutoff: string; horizonLabel: string;
+  currency: Currency; // of the quarterly revenue figures
   finishedAt: string; // ISO
   caveat: string; unchecked: number;
   corpus: Rec; // EvalRun.corpus_stats as the summary kept it
@@ -87,6 +90,8 @@ function results(caseKey: string, s: Rec, forecasts: Rec, finishedAt: string) {
 
   return {
     caseKey, company: s.company ?? "", cutoff: s.cutoff ?? "", horizonLabel: s.horizon?.label ?? "", finishedAt,
+    // Runs scored before the summary recorded a currency: the case definition says which it is.
+    currency: (s.currency ?? (EVAL_CASES[caseKey] ? caseCurrency(EVAL_CASES[caseKey]) : "USD")) as Currency,
     caveat: s.caveats?.[1] ?? "", unchecked: Number(s.unchecked_answers) || 0, corpus: s.corpus ?? {},
     quarters: { rows, hits: nq.hits ?? 0, n: nq.n ?? rows.length, maePct: nq.mae_pct ?? null, miss },
     findings: {

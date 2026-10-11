@@ -1,7 +1,7 @@
 import { secrets } from "base44:runtime";
 import { type AgentUsage, MODEL } from "../../../shared/agent.ts";
 import { searchNews } from "../../../shared/brightdata.ts";
-import { EVAL_CASES, type EvalCase } from "../../../shared/eval/cases.ts";
+import { caseCurrency, EVAL_CASES, type EvalCase } from "../../../shared/eval/cases.ts";
 import { type FindingVerdict, type Forecast, gap, type RecMatch, scoreCondition, type ScoredFinding, scoreFindings } from "../../../shared/eval/scoring.ts";
 import { planKeywords, profileFingerprint } from "../../../shared/keywords.ts";
 import { runAgentPipeline } from "../pipeline.ts";
@@ -170,7 +170,7 @@ async function score(x: Ctx): Promise<Rec> {
   const news = scoreCondition(c, ev.forecasts.news as Forecast, j.recs_news as RecMatch[]);
   const noNews = scoreCondition(c, ev.forecasts.no_news as Forecast, j.recs_no_news as RecMatch[]);
   const summary = {
-    company: c.company, cutoff: c.cutoff, horizon: c.horizon, news, no_news: noNews, gap: gap(news, noNews),
+    company: c.company, cutoff: c.cutoff, horizon: c.horizon, currency: caseCurrency(c), news, no_news: noNews, gap: gap(news, noNews),
     findings: scoreFindings(findings.map(scored), j.findings as FindingVerdict[]),
     corpus: ev.corpus_stats ?? {}, caveats: c.caveats,
     unchecked_answers: [...c.quarters, ...c.kpis, ...c.questions, ...c.actions].filter((a) => a.check).length,

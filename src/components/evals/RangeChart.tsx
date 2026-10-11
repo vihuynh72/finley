@@ -1,10 +1,12 @@
+import { CURRENCY_SYMBOL, type Currency } from "../../../base44/shared/eval/cases.ts";
 import type { QuarterRow } from "./view";
 
 type Row = Pick<QuarterRow, "id" | "q" | "span" | "actual" | "lo" | "mid" | "hi" | "hit">;
 
 // Predicted range (box), its midpoint (bar) and the reported actual (dot) for each quarter, with a
 // tick or cross for whether the actual landed inside the range. Shared by the Evals and landing pages.
-export function RangeChart({ rows, label = "Predicted range vs actual revenue by quarter" }: { rows: Row[]; label?: string }) {
+export function RangeChart({ rows, label = "Predicted range vs actual revenue by quarter", currency = "USD" }: { rows: Row[]; label?: string; currency?: Currency }) {
+  const $ = CURRENCY_SYMBOL[currency] ?? "$";
   const vals = rows.flatMap((r) => [r.actual, r.lo, r.hi].filter((v) => v != null) as number[]);
   if (!vals.length) return null;
   const min = Math.floor(Math.min(...vals) * 0.97 * 2) / 2, max = Math.ceil(Math.max(...vals) * 1.03 * 2) / 2;
@@ -20,15 +22,15 @@ export function RangeChart({ rows, label = "Predicted range vs actual revenue by
   return (
     <svg viewBox={`0 0 ${W} ${HH}`} className="w-full" role="img" aria-label={label}>
       {ticks.map((t) => (
-        <g key={t}><line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} stroke="var(--border)" /><text x={pad.l - 8} y={y(t) + 4} textAnchor="end" fontSize={10} fill="var(--muted-foreground)">${t.toFixed(digits)}B</text></g>
+        <g key={t}><line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} stroke="var(--border)" /><text x={pad.l - 8} y={y(t) + 4} textAnchor="end" fontSize={10} fill="var(--muted-foreground)">{$}{t.toFixed(digits)}B</text></g>
       ))}
       {rows.map((r, i) => {
         const cx = pad.l + step * i + step / 2;
         return (
           <g key={r.id}>
-            {r.lo != null && r.hi != null && <rect x={cx - 22} y={y(r.hi)} width={44} height={Math.max(2, y(r.lo) - y(r.hi))} rx={6} fill="var(--chart)" fillOpacity={0.6} stroke="var(--strong)" strokeOpacity={0.3}><title>{`Predicted $${r.lo}B–$${r.hi}B`}</title></rect>}
-            {r.mid != null && <line x1={cx - 26} x2={cx + 26} y1={y(r.mid)} y2={y(r.mid)} stroke="var(--strong)" strokeWidth={2.5}><title>{`Midpoint $${r.mid}B`}</title></line>}
-            <circle cx={cx} cy={y(r.actual)} r={6} fill="var(--foreground)"><title>{`Actual $${r.actual}B`}</title></circle>
+            {r.lo != null && r.hi != null && <rect x={cx - 22} y={y(r.hi)} width={44} height={Math.max(2, y(r.lo) - y(r.hi))} rx={6} fill="var(--chart)" fillOpacity={0.6} stroke="var(--strong)" strokeOpacity={0.3}><title>{`Predicted ${$}${r.lo}B–${$}${r.hi}B`}</title></rect>}
+            {r.mid != null && <line x1={cx - 26} x2={cx + 26} y1={y(r.mid)} y2={y(r.mid)} stroke="var(--strong)" strokeWidth={2.5}><title>{`Midpoint ${$}${r.mid}B`}</title></line>}
+            <circle cx={cx} cy={y(r.actual)} r={6} fill="var(--foreground)"><title>{`Actual ${$}${r.actual}B`}</title></circle>
             <g transform={`translate(${cx + 32}, ${y(r.actual) - 9})`}>
               <circle cx={9} cy={9} r={9} fill={r.hit ? "var(--success)" : "var(--danger)"} />
               <text x={9} y={13} textAnchor="middle" fontSize={12} fontWeight={700} fill={r.hit ? "var(--on-bright)" : "#fff"}>{r.hit ? "✓" : "✕"}</text>

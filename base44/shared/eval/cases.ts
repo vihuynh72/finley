@@ -5,7 +5,9 @@
 // written (sec.gov and the shareholder letters could not be opened from the build environment).
 // Confirm each against the 10-K and quarterly letters before the demo, then set check: false.
 
-export interface EvalQuarter { id: string; label: string; span: string; start: string; end: string; actual: number; unit: "USD B"; source: string; check?: boolean }
+// Quarterly revenue in billions of the company's reporting currency (Netflix: USD; Spotify: EUR).
+export type Currency = "USD" | "EUR";
+export interface EvalQuarter { id: string; label: string; span: string; start: string; end: string; actual: number; unit: `${Currency} B`; source: string; check?: boolean }
 export interface EvalKpi { id: string; name: string; unit: string; base: number; base_note: string; flat_band: number; actual: number; source: string; check?: boolean }
 export interface EvalQuestion { id: string; text: string; outcome: boolean; resolution: string; source: string; check?: boolean }
 export interface EvalAction { id: string; date: string; kind: "decision" | "risk_event"; text: string; source: string; check?: boolean }
@@ -108,10 +110,13 @@ export const NETFLIX_2023: EvalCase = {
 
 export const EVAL_CASES: Record<string, EvalCase> = { [NETFLIX_2023.key]: NETFLIX_2023 };
 
+export const caseCurrency = (c: Pick<EvalCase, "quarters">): Currency => (c.quarters[0]?.unit === "EUR B" ? "EUR" : "USD");
+export const CURRENCY_SYMBOL: Record<Currency, string> = { USD: "$", EUR: "€" };
+
 // What the agents may see: the questions, the KPI definitions and the quarters, never an outcome.
 export function publicCase(c: EvalCase) {
   return {
-    key: c.key, company: c.company, cutoff: c.cutoff, horizon: c.horizon, known_at_cutoff: c.known_at_cutoff,
+    key: c.key, company: c.company, cutoff: c.cutoff, horizon: c.horizon, known_at_cutoff: c.known_at_cutoff, currency: caseCurrency(c),
     quarters: c.quarters.map(({ id, label, span }) => ({ id, label, span })),
     kpis: c.kpis.map(({ id, name, unit, base, base_note }) => ({ id, name, unit, base, base_note })),
     questions: c.questions.map(({ id, text }) => ({ id, text })),

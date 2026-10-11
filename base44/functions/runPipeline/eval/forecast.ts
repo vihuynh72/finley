@@ -15,7 +15,7 @@ import { choice, list, num, obj, str } from "../../../shared/schema.ts";
 const FORECAST_SCHEMA = obj({
   quarters: list(obj({
     id: str("Quarter id exactly as given, e.g. 2023-Q1"),
-    low: num("Low end of an 80% range, USD billions"), mid: num("Best estimate, USD billions"), high: num("High end of an 80% range, USD billions"),
+    low: num("Low end of an 80% range, in billions of the quarters' currency"), mid: num("Best estimate, in billions of the quarters' currency"), high: num("High end of an 80% range, in billions of the quarters' currency"),
     rationale: str("One sentence"),
   })),
   kpis: list(obj({
@@ -79,7 +79,7 @@ export function forecastPrompt(c: EvalCase, condition: "news" | "no_news", evide
     `<company_profile>\n${profileText(c.profile)}\n</company_profile>`,
     `<public_at_cutoff>\n${pub.known_at_cutoff.map((k) => `- ${k}`).join("\n")}\n</public_at_cutoff>`,
     condition === "news" ? `<briefing note="Finley's scan of news published up to the cutoff">\n${evidence}\n</briefing>` : "No news scan is available. Reason from the profile and the public facts only.",
-    `<quarters unit="USD billions, quarterly revenue">\n${pub.quarters.map((q) => `- ${q.id}: ${q.label} (${q.span})`).join("\n")}\n</quarters>`,
+    `<quarters unit="${pub.currency} billions, quarterly revenue as reported">\n${pub.quarters.map((q) => `- ${q.id}: ${q.label} (${q.span})`).join("\n")}\n</quarters>`,
     `<kpis>\n${pub.kpis.map((k) => `- ${k.id}: ${k.name}, unit ${k.unit}, base value ${k.base} (${k.base_note})`).join("\n")}\n</kpis>`,
     `<questions>\n${pub.questions.map((q) => `- ${q.id}: ${q.text}`).join("\n")}\n</questions>`,
     "Write the forecast.",

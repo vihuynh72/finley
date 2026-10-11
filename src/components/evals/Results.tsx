@@ -4,7 +4,7 @@ import { Formula, Section } from "@/components/bits";
 import { ScoreChip } from "@/components/ScoreChips";
 import { cn } from "@/lib/utils";
 import { RangeChart, RangeLegend } from "./RangeChart";
-import { dayLabel, usdB, signed, type BacktestView, type Metric as MetricT } from "./view";
+import { dayLabel, moneyB, signed, type BacktestView, type Metric as MetricT } from "./view";
 
 type Rec = Record<string, any>;
 const tip = { background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, color: "var(--foreground)" };
@@ -30,7 +30,7 @@ export function Results({ v }: { v: BacktestView }) {
       <Section title={`A. ${v.company} ${v.horizonLabel.toLowerCase()} quarterly revenue`}>
         <div className="glass p-6">
           <RangeLegend />
-          <RangeChart rows={q.rows} />
+          <RangeChart rows={q.rows} currency={v.currency} />
           <Formula>Within range = actual ≥ low and actual ≤ high. Error = (actual − midpoint) ÷ actual. Forecast written as of {dayLabel(v.cutoff)}.</Formula>
         </div>
         <div className="grid grid-cols-3 gap-5">
@@ -41,9 +41,9 @@ export function Results({ v }: { v: BacktestView }) {
                 {q.rows.map((r) => (
                   <tr key={r.id} className={cn(!r.hit && "bg-danger-soft/60")}>
                     <td className="px-4 py-2.5 font-medium">{r.q} <span className="text-xs font-normal text-muted-foreground">{r.span}</span></td>
-                    <td className="num">{usdB(r.mid)}</td>
-                    <td className="num text-muted-foreground">{usdB(r.baseMid)}</td>
-                    <td className="num">{usdB(r.actual)}</td>
+                    <td className="num">{moneyB(r.mid, v.currency)}</td>
+                    <td className="num text-muted-foreground">{moneyB(r.baseMid, v.currency)}</td>
+                    <td className="num">{moneyB(r.actual, v.currency)}</td>
                     <td className="num">{signed(r.err, 1, "%")}</td>
                     <td>{r.hit ? <span className="inline-flex items-center gap-1 text-success-ink"><Check size={14} /> {r.verdict}</span> : <span className="inline-flex items-center gap-1 font-medium text-danger-ink"><X size={14} /> {r.verdict}</span>}</td>
                   </tr>
@@ -56,7 +56,7 @@ export function Results({ v }: { v: BacktestView }) {
               <p className={cn("text-[10px] font-bold uppercase tracking-wide", miss.hit ? "text-success-ink" : "text-danger-ink")}>{miss.hit ? "Largest error" : "Miss"}</p>
               <h3 className="mt-1 text-lg font-semibold">{miss.hit ? `${miss.q} was furthest from the midpoint` : `Missed ${miss.q}`}</h3>
               <p className="mt-2 text-sm">{miss.rationale}</p>
-              <p className="mt-3 text-xs text-muted-foreground">Actual {usdB(miss.actual)} vs range {usdB(miss.lo)}–{usdB(miss.hi)}. We show misses openly so you can judge the method.</p>
+              <p className="mt-3 text-xs text-muted-foreground">Actual {moneyB(miss.actual, v.currency)} vs range {moneyB(miss.lo, v.currency)}–{moneyB(miss.hi, v.currency)}. We show misses openly so you can judge the method.</p>
             </div>
           )}
         </div>

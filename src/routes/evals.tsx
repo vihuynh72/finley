@@ -33,8 +33,10 @@ function Evals() {
   const app = useApp();
   const qc = useQueryClient();
   const nav = useNavigate();
-  const cases = publishedCases();
-  const [caseKey, setCaseKey] = useState(() => (cases.includes(DEFAULT_CASE) || !cases.length ? DEFAULT_CASE : cases[0]!));
+  // Every case can be run live; a case with a published snapshot opens on it.
+  const published = publishedCases();
+  const cases = Object.keys(EVAL_CASES);
+  const [caseKey, setCaseKey] = useState(() => (published.includes(DEFAULT_CASE) || !published.length ? DEFAULT_CASE : published[0]!));
   const c = EVAL_CASES[caseKey] ?? EVAL_CASES[DEFAULT_CASE]!;
   const pub = usePublished(caseKey);
   const runs = useQuery({
@@ -157,7 +159,7 @@ function Evals() {
           <label className="flex items-center gap-2 text-xs text-muted-foreground">
             Case
             <select value={caseKey} onChange={(e) => pickCase(e.target.value)} className="rounded-lg border bg-card px-3 py-1.5 text-sm font-semibold text-foreground">
-              {cases.map((k) => <option key={k} value={k}>{EVAL_CASES[k]!.company} · {EVAL_CASES[k]!.horizon.label}</option>)}
+              {cases.map((k) => <option key={k} value={k}>{EVAL_CASES[k]!.company} · as of {dayLabel(EVAL_CASES[k]!.cutoff)}{published.includes(k) ? " · published" : ""}</option>)}
             </select>
           </label>
         )}
