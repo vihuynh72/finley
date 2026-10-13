@@ -14,6 +14,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 2px);
   --color-background: var(--background);
+  --color-paper: var(--paper);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
@@ -64,6 +65,8 @@
   /* Figma palette: warm grey canvas, off-white cards, lime accent, near-black ink */
   --radius: 1rem;
   --background: #EFEFE8;
+  /* Plain white canvas, used by the landing page */
+  --paper: #FFFFFF;
   --foreground: #1B1C18;
   --card: #FAFAF6;
   --card-foreground: #1B1C18;
@@ -114,6 +117,7 @@
 
 .dark {
   --background: oklch(0.16 0.008 260);
+  --paper: oklch(0.16 0.008 260);
   --foreground: oklch(0.96 0.004 110);
   --card: oklch(0.18 0.01 260);
   --card-foreground: oklch(0.96 0.004 110);

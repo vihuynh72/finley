@@ -28,7 +28,7 @@ export const Route = createFileRoute("/")({
 function Landing() {
   return (
     // Main's landing used an 8px base radius (the app uses 16px); sections clear the 56px sticky nav on anchor jumps.
-    <div className="min-h-screen bg-background [--radius:0.5rem] [&_section]:scroll-mt-14">
+    <div className="min-h-screen bg-paper [--radius:0.5rem] [&_section]:scroll-mt-14">
       <LandingNav />
       <Hero />
       <ProblemSection />

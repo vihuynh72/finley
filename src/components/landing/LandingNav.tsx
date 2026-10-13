@@ -5,7 +5,7 @@ const LINKS: [string, string][] = [["How it works", "#how"], ["Scenarios", "#sce
 
 export function LandingNav() {
   return (
-    <header className="sticky top-0 z-40 bg-background/80 backdrop-blur border-b border-border">
+    <header className="sticky top-0 z-40 bg-paper/80 backdrop-blur border-b border-border">
       <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Logo />
