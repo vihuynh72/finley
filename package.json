@@ -15,8 +15,8 @@
     "backtest:dry": "deno run --no-config --import-map scripts/backtest/import_map.json --allow-env=TZ,ANTHROPIC_API_KEY,ANTHROPIC_AUTH_TOKEN,ANTHROPIC_BASE_URL,ANTHROPIC_CUSTOM_HEADERS,ANTHROPIC_LOG,ANTHROPIC_WEBHOOK_SIGNING_KEY,BRIGHTDATA_API_KEY,BRIGHTDATA_SERP_ZONE,EVAL_MODEL,EVAL_JUDGE_MODEL --allow-read=scripts/backtest,base44/entities --allow-write=scripts/backtest/.state scripts/backtest/run.ts --dry-run"
   },
   "dependencies": {
-    "@base44/sdk": "^0.8.53",
-    "@base44/vite-plugin": "^1.0.45",
+    "@base44/sdk": "^0.8.54",
+    "@base44/vite-plugin": "^1.0.46",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
